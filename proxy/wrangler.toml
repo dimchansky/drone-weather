@@ -1,0 +1,7 @@
+name = "drone-weather-metar-proxy"
+main = "src/worker.ts"
+compatibility_date = "2025-06-01"
+
+# Uncomment to override the upstream API base (defaults to NOAA aviationweather.gov):
+# [vars]
+# UPSTREAM = "https://aviationweather.gov/api/data"
