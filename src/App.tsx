@@ -5,6 +5,7 @@ import { useLocationStore } from './store/locationStore';
 import { LocationBar } from './components/Location/LocationBar';
 import { SettingsBar } from './components/SettingsBar/SettingsBar';
 import { RiskSummary } from './components/Risk/RiskSummary';
+import { WindCompass } from './components/Wind/WindCompass';
 import { StationCard } from './components/Station/StationCard';
 import { CloudsCard } from './components/Clouds/CloudsCard';
 import { ThermoCard } from './components/Thermo/ThermoCard';
@@ -58,6 +59,7 @@ export function App() {
             )}
 
             <RiskSummary risk={brief.risk} />
+            <WindCompass wind={brief.metar.wind} />
             <StationCard brief={brief} />
             <CloudsCard brief={brief} />
             <ThermoCard metar={brief.metar} />

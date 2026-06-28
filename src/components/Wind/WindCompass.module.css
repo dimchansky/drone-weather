@@ -1,0 +1,132 @@
+.layout {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.svg {
+  width: 150px;
+  height: 150px;
+  flex: 0 0 auto;
+}
+
+.ring {
+  fill: var(--surface-2);
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.tick {
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.card {
+  fill: var(--text-dim);
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.arrow {
+  stroke: var(--accent-sky);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.headFill {
+  fill: var(--accent-sky);
+}
+
+.srcDot {
+  fill: var(--text-dim);
+}
+
+.center {
+  fill: var(--text);
+}
+
+.varArc {
+  fill: none;
+  stroke: var(--caution);
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+.calm {
+  fill: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.facts {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.speedRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.speed {
+  font-size: 2.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.speedUnit {
+  font-size: 1rem;
+  color: var(--text-dim);
+}
+
+.speedAlt {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.gust {
+  margin: 6px 0 0;
+  font-weight: 600;
+  color: var(--high);
+}
+
+.dirs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.dirs dt {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dirs dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.varNote {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  color: var(--caution);
+}
+
+.advice {
+  margin: 14px 0 0;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
