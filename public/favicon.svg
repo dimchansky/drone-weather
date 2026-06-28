@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Drone Weather">
+  <rect width="512" height="512" fill="#0b1f33"/>
+  <g stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <g stroke="#e8f0f7">
+      <line x1="256" y1="256" x2="156" y2="156"/>
+      <line x1="256" y1="256" x2="356" y2="156"/>
+      <line x1="256" y1="256" x2="156" y2="356"/>
+      <line x1="256" y1="256" x2="356" y2="356"/>
+    </g>
+    <g stroke="#38bdf8">
+      <circle cx="156" cy="156" r="48"/>
+      <circle cx="356" cy="156" r="48"/>
+      <circle cx="156" cy="356" r="48"/>
+      <circle cx="356" cy="356" r="48"/>
+    </g>
+  </g>
+  <rect x="212" y="222" width="88" height="68" rx="18" fill="#e8f0f7"/>
+</svg>
