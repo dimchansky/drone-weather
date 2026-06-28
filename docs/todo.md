@@ -53,18 +53,18 @@
 - [ ] `briefStore` (current brief, fetchedAt, loading/error/stale)
 - [ ] `settingsStore` (units, ops ceiling, theme, thresholds)
 
-## Phase 6 — UI (mobile-first)
-- [ ] App shell + responsive layout + disclaimer/version footer
-- [ ] `Location` (GPS button, manual coords, nearby-station picker)
-- [ ] `Station` (distance/bearing/age + far/stale warnings)
-- [ ] `RiskSummary` (status chip + headline + component chips w/ reasons + uncertain badge)
-- [ ] `Wind` (SVG compass: source + drift + variable arc, units, gust, route advice)
-- [ ] `VerticalAnalyzer` (SVG: temp line, cloud base, icing band, zones, 0–120 m focus)
-- [ ] `Clouds` (layers ft+m, ceiling, CAVOK/estimate tagging)
-- [ ] `ThermoMoisture` (T/Td/RH/spread + interpretation)
-- [ ] `RawData` (collapsible raw METAR + TAF, copy)
-- [ ] `ReloadPrompt` (reuse)
-- [ ] Loading / error / empty / stale / offline states
+## Phase 6 — UI (mobile-first) ✅ (verified in-browser with live KMCI data)
+- [x] App shell + responsive layout + disclaimer/version footer
+- [x] `Location` (GPS button + manual coords) and `SettingsBar` (units/theme)
+- [x] `Station` (distance/bearing/age + nearby switcher + far/stale warnings)
+- [x] `RiskSummary` (overall chip + headline + per-component reasons + uncertain badge)
+- [x] `Wind` (SVG compass: source vs drift arrow, variable arc, units, gust, route advice)
+- [x] `VerticalAnalyzer` (SVG icing bands + temps + cloud base + ops ceiling, 0–150/1000 m toggle)
+- [x] `Clouds` (layers ft+m, ceiling, CAVOK/estimate tagging)
+- [x] `Thermo` (T/Td/RH/spread + interpretation + QNH)
+- [x] `RawData` (raw METAR + TAF, copy)
+- [x] `ReloadPrompt` (reused)
+- [x] Loading / error / empty / offline states
 
 ## Phase 7 — Polish, test, deploy
 - [ ] Component tests (risk render, raw-METAR visibility)

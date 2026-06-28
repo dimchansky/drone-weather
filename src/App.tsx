@@ -7,6 +7,7 @@ import { SettingsBar } from './components/SettingsBar/SettingsBar';
 import { RiskSummary } from './components/Risk/RiskSummary';
 import { WindCompass } from './components/Wind/WindCompass';
 import { StationCard } from './components/Station/StationCard';
+import { VerticalAnalyzer } from './components/Vertical/VerticalAnalyzer';
 import { CloudsCard } from './components/Clouds/CloudsCard';
 import { ThermoCard } from './components/Thermo/ThermoCard';
 import { RawData } from './components/Raw/RawData';
@@ -61,6 +62,7 @@ export function App() {
             <RiskSummary risk={brief.risk} />
             <WindCompass wind={brief.metar.wind} />
             <StationCard brief={brief} />
+            <VerticalAnalyzer brief={brief} />
             <CloudsCard brief={brief} />
             <ThermoCard metar={brief.metar} />
             <RawData brief={brief} />

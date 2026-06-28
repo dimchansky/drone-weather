@@ -1,0 +1,100 @@
+.svg {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.band {
+  opacity: 0.85;
+  stroke: var(--surface);
+  stroke-width: 0.5;
+}
+
+.colOutline {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.tick {
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.axisLabel {
+  fill: var(--text-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tempLabel {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ops {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+}
+
+.opsLabel {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.base {
+  stroke: var(--accent-sky);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.baseLabel {
+  fill: var(--accent-sky);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.toggle {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.legItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
