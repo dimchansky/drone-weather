@@ -1,0 +1,70 @@
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.primary,
+.ghost {
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ghost {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.current {
+  margin: 0;
+  font-size: 0.9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.src {
+  color: var(--text-dim);
+}
+
+.manual {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.manual input {
+  flex: 1 1 120px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.error {
+  margin: 0;
+  color: var(--nofly);
+  font-size: 0.85rem;
+}

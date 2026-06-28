@@ -5,7 +5,7 @@
   max-width: var(--maxw);
   margin: 0 auto;
   padding: 16px;
-  gap: 16px;
+  gap: 14px;
 }
 
 .header {
@@ -16,30 +16,54 @@
 
 .title {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   letter-spacing: -0.01em;
 }
 
 .tagline {
   margin: 0;
   color: var(--text-dim);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .main {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.card {
+.placeholder {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px dashed var(--border);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 24px 18px;
+  text-align: center;
+  color: var(--text-dim);
 }
 
-.cardTitle {
-  margin: 0 0 8px;
-  font-size: 1.1rem;
+.errorBox {
+  background: var(--surface);
+  border: 1px solid var(--nofly);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.errorBox p {
+  margin: 0 0 6px;
+}
+
+.dim {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.banner {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.85rem;
 }
 
 .footer {
@@ -52,7 +76,7 @@
 
 .disclaimer {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-dim);
 }
 

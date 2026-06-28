@@ -1,0 +1,64 @@
+.layers {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.layers li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cover {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  width: 3.2em;
+}
+
+.base {
+  font-variant-numeric: tabular-nums;
+}
+
+.okta {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.summary dt {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary dd {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cavok {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.note,
+.muted {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
