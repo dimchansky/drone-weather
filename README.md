@@ -14,8 +14,10 @@ Design docs: [docs/initial-idea.md](docs/initial-idea.md) ·
 
 ## Status
 
-🚧 Early development. The project skeleton (PWA, tests, CI) is in place; the weather
-features are being implemented against [docs/spec.md](docs/spec.md).
+✅ **v0.1 is live** at **https://dimchansky.github.io/drone-weather/** — get your location,
+find the nearest METAR station, and read a full drone-oriented brief (wind/drift, vertical
+hazard analyzer, icing, transparent risk summary). METAR/TAF flow through the deployed
+Cloudflare Worker proxy; the vertical profile uses Open-Meteo upper-air data.
 
 ## Architecture (short version)
 

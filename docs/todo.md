@@ -67,11 +67,13 @@
 - [x] Loading / error / empty / offline states
 
 ## Phase 7 — Polish, test, deploy
-- [ ] Component tests (risk render, raw-METAR visibility)
-- [ ] Accessibility pass (color-not-only, text equivalents, Radix dialogs)
-- [ ] Lighthouse/PWA install check on mobile + desktop
-- [ ] Deploy Worker (Cloudflare) + frontend (GitHub Pages); verify end-to-end
-- [ ] Update README + docs with live URLs
+- [x] Component tests (risk renders every reason; raw METAR always visible)
+- [x] Accessibility basics (severity = colour dot + text label; SVGs have role/aria-label;
+      native accessible `select`/form controls)
+- [~] PWA: manifest + service worker + offline shell + prompt-update verified in build;
+      full Lighthouse audit on devices = later
+- [x] Worker deployed (Cloudflare) + frontend (GitHub Pages); end-to-end verified in-browser
+- [x] README + docs updated with live URL
 
 ## Backlog / later (see idea doc §13)
 - [ ] Configurable per-drone thresholds
