@@ -39,11 +39,14 @@
 - [x] `risk.ts` (component risks + `assessRisk` aggregation + confidence downgrade) + tests
 - [x] `severity.ts` (shared ordering helpers — added during impl; used by icing + risk)
 
-## Phase 4 — Data layer
-- [ ] `data/cache.ts` (TTL localStorage + last-good brief)
-- [ ] `data/noaa.ts` (getMetar, getTaf, nearestStations via bbox)
-- [ ] `data/openMeteo.ts` (pressure-level profile, surface fallback)
-- [ ] Degradation chain + fixtures captured from live APIs
+## Phase 4 — Data layer ✅ (88 tests green incl. fixtures; live smoke test passing)
+- [x] `data/cache.ts` (TTL localStorage cache + stale-on-error fallback)
+- [x] `data/noaa.ts` (getMetar, getTaf, nearestStations via bbox; obsTime-authoritative age)
+- [x] `data/openMeteo.ts` (pressure-level profile in AGL, surface fallback)
+- [x] Fixtures captured from live APIs + gated `live.test.ts` (run with `LIVE=1`)
+- [x] Worker URL wired: `.env` (local) + CI variable `METAR_PROXY_URL`
+- [~] Degradation chain: building blocks done (cache stale fallback, lapse + surface
+      fallbacks); the try-METAR→fallback orchestration is wired in Phase 5 (store)
 
 ## Phase 5 — State
 - [ ] `locationStore` (GPS/manual, selected station, nearby list)
