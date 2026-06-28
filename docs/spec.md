@@ -218,11 +218,17 @@ in/near the band, fog/mist phenomena, precipitation, or small dew-point spread /
 
 ### 4.8 `risk.ts`
 ```ts
-windRisk, gustRisk, visibilityRisk, moistureRisk, ceilingRisk, icingRisk: (…) => RiskComponent
-freshnessRisk(ageMin): RiskComponent       // → confidence contributor
-distanceRisk(distanceKm): RiskComponent    // → confidence contributor
-aggregateRisk(components, confidenceInputs): RiskSummary
+windRisk(speedKt, dirDeg), gustRisk(speedKt, gustKt), visibilityRisk(visM),
+moistureRisk(metar), ceilingRisk(metar, opsCeilingM),
+icingRiskComponent(worst, reason): RiskComponent
+freshness(ageMin): { confidence; component }    // confidence contributor + display row
+distance(distanceKm): { confidence; component }  // confidence contributor + display row
+assessRisk({ metar, icingWorst, icingReason, distanceKm, opsCeilingM }): RiskSummary
 ```
+> Implemented as `assessRisk` (orchestrator) rather than a bare `aggregateRisk` — it
+> builds the six weather components, derives confidence from freshness+distance, applies
+> the weakest-link + one-step confidence bump, and returns all eight components for
+> display. Ordering helpers live in `severity.ts` (shared with `icing.ts`).
 
 ---
 

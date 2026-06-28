@@ -27,16 +27,17 @@
 - [~] Wire `VITE_METAR_PROXY_URL` — build-arg + `.env.example` + CI var done; frontend
       consumption lands in Phase 4 (data layer). Worker not yet deployed (needs Cloudflare acct).
 
-## Phase 3 — Domain layer (pure) + tests
-- [ ] `domain/types.ts`
-- [ ] `geo.ts` (haversine, bearing, compass point) + tests
-- [ ] `units.ts` (kt/ms/kmh, ft/m, pressure) + tests
-- [ ] `humidity.ts` (Magnus Td↔RH, spread) + tests
-- [ ] `clouds.ts` (layers, ceiling, CAVOK, estimated base, priority resolve) + tests
-- [ ] `metar.ts` (raw parse: wind incl. VRB/var sector, phenomena, CAVOK, VV, CB/TCU, vis) + tests
-- [ ] `profile.ts` (lapse profile, alt grid, model merge/interpolate) + tests
-- [ ] `icing.ts` (per-level + band per §5.6) + tests
-- [ ] `risk.ts` (component risks + aggregation + confidence downgrade) + tests
+## Phase 3 — Domain layer (pure) + tests ✅ (72 tests green, typecheck + build clean)
+- [x] `domain/types.ts`
+- [x] `geo.ts` (haversine, bearing, compass point) + tests
+- [x] `units.ts` (kt/ms/kmh, ft/m, pressure, round) + tests
+- [x] `humidity.ts` (Magnus Td↔RH, spread) + tests
+- [x] `clouds.ts` (layers, ceiling, CAVOK, estimated base, priority resolve) + tests
+- [x] `metar.ts` (raw parse: wind incl. VRB/var sector, phenomena, CAVOK, VV, CB/TCU, vis) + tests
+- [x] `profile.ts` (lapse profile, alt grid, model merge/interpolate) + tests
+- [x] `icing.ts` (per-level + band per §5.6) + tests
+- [x] `risk.ts` (component risks + `assessRisk` aggregation + confidence downgrade) + tests
+- [x] `severity.ts` (shared ordering helpers — added during impl; used by icing + risk)
 
 ## Phase 4 — Data layer
 - [ ] `data/cache.ts` (TTL localStorage + last-good brief)
