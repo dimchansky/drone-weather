@@ -7,7 +7,11 @@ import { getProfile } from '../openMeteo';
 const baseUrl = 'https://drone-weather-metar-proxy.dimchansky.workers.dev';
 const KC = { lat: 39.2975, lon: -94.7309 };
 
-describe.skipIf(!process.env.LIVE)('live data layer', () => {
+// Read the LIVE flag without depending on @types/node (process isn't typed here).
+const LIVE = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
+  ?.env?.LIVE;
+
+describe.skipIf(!LIVE)('live data layer', () => {
   it('fetches and parses a real METAR', async () => {
     const m = await getMetar('KMCI', { baseUrl });
     expect(m.icao).toBe('KMCI');
