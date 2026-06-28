@@ -58,3 +58,20 @@ describe('nearestStations', () => {
     expect(await nearestStations(KC, 50, { fetchJson: fixtureFetch({}) })).toEqual([]);
   });
 });
+
+describe('empty (HTTP 204) responses — no station in the bbox', () => {
+  // The proxy/cache resolves an empty 204 body to `undefined`; adapters must not crash.
+  const noContent = async () => undefined;
+
+  it('nearestStations returns [] so the caller can fall back to model data', async () => {
+    expect(await nearestStations(KC, 80, { fetchJson: noContent })).toEqual([]);
+  });
+
+  it('getTaf returns null', async () => {
+    expect(await getTaf('KMCI', { fetchJson: noContent })).toBeNull();
+  });
+
+  it('getMetar throws a clear error rather than a JSON parse error', async () => {
+    await expect(getMetar('KMCI', { fetchJson: noContent })).rejects.toThrow(/No METAR/);
+  });
+});

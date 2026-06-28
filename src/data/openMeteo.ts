@@ -64,15 +64,15 @@ function reader(hourly: Record<string, unknown>, i: number) {
   };
 }
 
-function timesOf(data: OpenMeteoResponse): string[] | null {
-  const t = data.hourly?.time;
+function timesOf(data: OpenMeteoResponse | undefined): string[] | null {
+  const t = data?.hourly?.time;
   return Array.isArray(t) && t.length ? (t as string[]) : null;
 }
 
 /** Parse an Open-Meteo response into raw model levels (AGL), sorted ascending. */
-export function parseProfile(data: OpenMeteoResponse, now: Date): ProfileLevel[] {
+export function parseProfile(data: OpenMeteoResponse | undefined, now: Date): ProfileLevel[] {
   const times = timesOf(data);
-  if (!times || !data.hourly) return [];
+  if (!times || !data?.hourly) return [];
   const i = nearestHourIndex(times, now);
   const val = reader(data.hourly, i);
   const elev = typeof data.elevation === 'number' ? data.elevation : 0;
@@ -127,7 +127,7 @@ const defaultFetchJson = (url: string): Promise<unknown> => cachedFetchJson(url,
 export async function getProfile(coord: Coord, deps: OpenMeteoDeps = {}): Promise<ProfileLevel[]> {
   const fj = deps.fetchJson ?? defaultFetchJson;
   const now = deps.now ?? new Date();
-  const data = (await fj(buildUrl(coord))) as OpenMeteoResponse;
+  const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
   return parseProfile(data, now);
 }
 
@@ -148,9 +148,9 @@ export async function getSurfaceFallback(
 ): Promise<SurfaceFallback> {
   const fj = deps.fetchJson ?? defaultFetchJson;
   const now = deps.now ?? new Date();
-  const data = (await fj(buildUrl(coord))) as OpenMeteoResponse;
+  const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
   const times = timesOf(data);
-  if (!times || !data.hourly) {
+  if (!times || !data?.hourly) {
     return { coord, observedAt: now, tempC: null, dewpC: null, rhPct: null, windDirDeg: null, windKt: null };
   }
   const i = nearestHourIndex(times, now);

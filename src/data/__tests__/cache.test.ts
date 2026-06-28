@@ -1,11 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { cachedFetchJson } from '../cache';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { cachedFetchJson, FetchError } from '../cache';
 
-const ok = (data: unknown) => ({ ok: true, status: 200, json: async () => data });
+const ok = (data: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify(data) });
+const raw = (status: number, body: string, isOk = status >= 200 && status < 300) => ({
+  ok: isOk,
+  status,
+  text: async () => body,
+});
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
 
-describe('cachedFetchJson', () => {
+describe('cachedFetchJson — caching', () => {
   it('serves a fresh cache hit without re-fetching', async () => {
     let calls = 0;
     const fetchImpl = async () => {
@@ -49,9 +57,34 @@ describe('cachedFetchJson', () => {
     };
     await expect(cachedFetchJson('u', 1000, { fetchImpl })).rejects.toThrow();
   });
+});
 
-  it('throws on a non-OK response with no cache', async () => {
-    const fetchImpl = async () => ({ ok: false, status: 500, json: async () => ({}) });
-    await expect(cachedFetchJson('u', 1000, { fetchImpl })).rejects.toThrow(/500/);
+describe('cachedFetchJson — defensive parsing', () => {
+  it('resolves to undefined for an empty body (HTTP 204)', async () => {
+    const fetchImpl = async () => raw(204, '');
+    expect(await cachedFetchJson('u', 1000, { fetchImpl })).toBeUndefined();
+  });
+
+  it('resolves to undefined for a whitespace-only 200 body', async () => {
+    const fetchImpl = async () => raw(200, '   \n');
+    expect(await cachedFetchJson('u', 1000, { fetchImpl })).toBeUndefined();
+  });
+
+  it('throws a FetchError (with status + preview) on a non-OK response', async () => {
+    const fetchImpl = async () => raw(500, 'upstream boom');
+    await expect(cachedFetchJson('u', 1000, { fetchImpl })).rejects.toMatchObject({
+      name: 'FetchError',
+      status: 500,
+      bodyPreview: 'upstream boom',
+    });
+  });
+
+  it('throws a FetchError on a non-JSON body instead of "Unexpected end of JSON input"', async () => {
+    const fetchImpl = async () => raw(200, '<!doctype html><html>oops</html>');
+    await expect(cachedFetchJson('u', 1000, { fetchImpl })).rejects.toBeInstanceOf(FetchError);
+    await expect(cachedFetchJson('u', 1000, { fetchImpl })).rejects.toMatchObject({
+      status: 200,
+      message: expect.stringMatching(/not valid JSON/),
+    });
   });
 });

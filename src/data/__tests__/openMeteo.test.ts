@@ -31,6 +31,10 @@ describe('parseProfile', () => {
   it('returns an empty array for an empty response', () => {
     expect(parseProfile({}, NOON)).toEqual([]);
   });
+
+  it('returns an empty array for an undefined response (HTTP 204)', () => {
+    expect(parseProfile(undefined, NOON)).toEqual([]);
+  });
 });
 
 describe('getProfile / getSurfaceFallback', () => {

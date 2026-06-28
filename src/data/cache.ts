@@ -1,5 +1,5 @@
-// Tiny TTL cache over localStorage for JSON GET requests, with graceful fallback to a
-// stale entry when the network fails. See docs/spec.md §6.4.
+// Tiny TTL cache over localStorage for JSON GET requests, with defensive parsing and a
+// graceful fallback to a stale entry when the network fails. See docs/spec.md §6.4.
 
 const PREFIX = 'dw-cache:';
 
@@ -11,8 +11,32 @@ interface Entry<T> {
 interface FetchLike {
   ok: boolean;
   status: number;
-  json(): Promise<unknown>;
+  text(): Promise<string>;
 }
+
+/** Error carrying the endpoint, HTTP status and a body preview for diagnosis. */
+export class FetchError extends Error {
+  constructor(
+    public url: string,
+    public status: number,
+    public bodyPreview: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'FetchError';
+  }
+}
+
+function shortUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return u.pathname + u.search;
+  } catch {
+    return url;
+  }
+}
+
+const preview = (text: string): string => text.slice(0, 200).replace(/\s+/g, ' ').trim();
 
 function storage(): Storage | null {
   try {
@@ -49,8 +73,14 @@ export interface CacheOptions {
 }
 
 /**
- * GET JSON with a TTL cache. Fresh cache hits skip the network; on a network failure a
- * stale cached value is returned if present (graceful degradation), otherwise it throws.
+ * GET JSON with a TTL cache and defensive parsing.
+ *
+ * - Fresh cache hits skip the network.
+ * - A non-OK status, an unparseable body, or a network failure throws a `FetchError`
+ *   (carrying status + body preview) — unless a cached value exists, which is returned.
+ * - An empty body (e.g. NOAA's HTTP 204 when a bbox has no stations) resolves to
+ *   `undefined` rather than throwing "Unexpected end of JSON input"; callers treat that
+ *   as "no data".
  */
 export async function cachedFetchJson<T = unknown>(
   url: string,
@@ -63,14 +93,44 @@ export async function cachedFetchJson<T = unknown>(
   const cached = readCache<T>(url);
   if (cached && nowMs - cached.t < ttlMs) return cached.data;
 
+  let res: FetchLike;
   try {
-    const res = await doFetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as T;
+    res = await doFetch(url);
+  } catch (err) {
+    if (cached) return cached.data;
+    throw err; // genuine network failure
+  }
+
+  const text = await res.text().catch(() => '');
+
+  if (!res.ok) {
+    if (cached) return cached.data;
+    console.warn('[drone-weather] request failed', shortUrl(url), res.status, preview(text));
+    throw new FetchError(
+      url,
+      res.status,
+      preview(text),
+      `Request to ${shortUrl(url)} failed (HTTP ${res.status}).`,
+    );
+  }
+
+  if (text.trim() === '') {
+    // No content — e.g. NOAA returns 204 with an empty body when a bbox has no stations.
+    return undefined as unknown as T;
+  }
+
+  try {
+    const data = JSON.parse(text) as T;
     writeCache(url, data, nowMs);
     return data;
-  } catch (err) {
-    if (cached) return cached.data; // serve stale rather than nothing
-    throw err;
+  } catch {
+    if (cached) return cached.data;
+    console.warn('[drone-weather] non-JSON response', shortUrl(url), res.status, preview(text));
+    throw new FetchError(
+      url,
+      res.status,
+      preview(text),
+      `Response from ${shortUrl(url)} was not valid JSON.`,
+    );
   }
 }

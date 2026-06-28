@@ -59,10 +59,13 @@ export default {
     }
 
     const body = await resp.text();
-    const out = new Response(body, {
-      status: resp.status,
+    // NOAA replies 204 with an empty body when a bbox/query has no data. Normalize to an
+    // empty JSON array so browser clients never call `.json()` on an empty string.
+    const empty = resp.status === 204 || body.trim() === '';
+    const out = new Response(empty ? '[]' : body, {
+      status: empty ? 200 : resp.status,
       headers: {
-        'Content-Type': resp.headers.get('Content-Type') ?? 'application/json; charset=utf-8',
+        'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': `public, max-age=${CACHE_SECONDS}`,
       },
     });
