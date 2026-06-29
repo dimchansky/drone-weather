@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import styles from './App.module.css';
 import { useBriefLoader } from './hooks/useBriefLoader';
+import { useNow } from './hooks/useNow';
+import { assessRisk } from './domain/risk';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
 import { LocationBar } from './components/Location/LocationBar';
@@ -19,6 +22,23 @@ export function App() {
   useBriefLoader();
   const coord = useLocationStore((s) => s.coord);
   const { status, brief, error, offline } = useBriefStore();
+
+  // Tick the clock so age/freshness stay live while the app is open.
+  const now = useNow(30000);
+  const liveRisk = useMemo(
+    () =>
+      brief
+        ? assessRisk({
+            metar: brief.metar,
+            icingWorst: brief.icing.worst,
+            icingReason: brief.icing.reason,
+            distanceKm: brief.station?.distanceKm ?? null,
+            opsCeilingM: brief.opsCeilingM,
+            now,
+          })
+        : null,
+    [brief, now],
+  );
 
   return (
     <div className={styles.app}>
@@ -59,9 +79,9 @@ export function App() {
               <div className={styles.banner}>Couldn’t refresh ({error}); showing last data.</div>
             )}
 
-            <RiskSummary risk={brief.risk} />
+            <RiskSummary risk={liveRisk ?? brief.risk} observedAt={brief.metar.observedAt} />
             <WindCompass wind={brief.metar.wind} />
-            <StationCard brief={brief} />
+            <StationCard brief={brief} now={now} />
             <VerticalAnalyzer brief={brief} />
             <CloudsCard brief={brief} />
             <ThermoCard metar={brief.metar} />

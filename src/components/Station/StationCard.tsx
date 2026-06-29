@@ -2,12 +2,17 @@ import { Card } from '../common/Card';
 import { useBriefStore } from '../../store/briefStore';
 import { useLocationStore } from '../../store/locationStore';
 import { fmtDistance, fmtBearing, fmtAge } from '../../utils/format';
+import { ageMinutes, fmtLocalTime, fmtUtcTime } from '../../utils/time';
 import type { Brief } from '../../domain/brief';
 import styles from './StationCard.module.css';
 
-export function StationCard({ brief }: { brief: Brief }) {
+export function StationCard({ brief, now }: { brief: Brief; now: Date }) {
   const nearby = useBriefStore((s) => s.nearby);
   const setSelectedIcao = useLocationStore((s) => s.setSelectedIcao);
+
+  const observed = brief.metar.observedAt;
+  const age = ageMinutes(observed, now);
+  const fetched = `fetched ${fmtLocalTime(brief.fetchedAt)} LT`;
 
   if (brief.source === 'model' || !brief.station) {
     return (
@@ -16,12 +21,14 @@ export function StationCard({ brief }: { brief: Brief }) {
           No nearby METAR station found. Showing <strong>forecast model</strong> data for your
           location — treat it as an approximation.
         </p>
+        <p className={styles.fetched}>
+          Model time {fmtLocalTime(observed)} LT · {fetched}
+        </p>
       </Card>
     );
   }
 
   const st = brief.station;
-  const age = brief.metar.ageMin;
   const far = st.distanceKm > 40;
   const stale = age > 120;
 
@@ -41,11 +48,14 @@ export function StationCard({ brief }: { brief: Brief }) {
           <dt>Bearing</dt>
           <dd>{fmtBearing(st.bearingDeg)}</dd>
         </div>
-        <div>
-          <dt>METAR age</dt>
-          <dd>{fmtAge(age)}</dd>
+        <div title={`${fmtUtcTime(observed)} · ${fetched}`}>
+          <dt>METAR observed</dt>
+          <dd>{fmtLocalTime(observed)} LT</dd>
+          <span className={styles.sub}>{fmtAge(age)} old</span>
         </div>
       </dl>
+
+      <p className={styles.fetched}>{fetched}</p>
 
       {nearby.length > 1 && (
         <label className={styles.picker}>

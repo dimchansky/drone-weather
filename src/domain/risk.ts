@@ -174,10 +174,13 @@ export interface RiskInputs {
   icingReason: string;
   distanceKm: number | null;
   opsCeilingM?: number;
+  /** Reference time for freshness; defaults to the real current time. */
+  now?: Date;
 }
 
 export function assessRisk(inputs: RiskInputs): RiskSummary {
   const { metar, icingWorst, icingReason, distanceKm, opsCeilingM } = inputs;
+  const now = inputs.now ?? new Date();
 
   const weather: RiskComponent[] = [
     windRisk(metar.wind.speedKt, metar.wind.dirDeg),
@@ -188,7 +191,10 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
     icingRiskComponent(icingWorst, icingReason),
   ];
 
-  const fresh = freshness(metar.ageMin);
+  // Compute age from the absolute observation timestamp + live `now` so it stays
+  // correct as the page ages, rather than freezing the value captured at fetch.
+  const ageMin = Math.max(0, Math.round((now.getTime() - metar.observedAt.getTime()) / 60000));
+  const fresh = freshness(ageMin);
   const dist = distance(distanceKm);
   const confidence = worseConfidence(fresh.confidence, dist.confidence);
   const uncertain = confidence !== 'OK';

@@ -37,6 +37,20 @@
   font-weight: 600;
 }
 
+.sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.fetched {
+  margin: 10px 0 0;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+}
+
 .picker {
   display: flex;
   flex-direction: column;

@@ -32,4 +32,9 @@ describe('RiskSummary', () => {
     // The eight components: 6 weather + freshness + distance.
     expect(brief.risk.components).toHaveLength(8);
   });
+
+  it('prefixes the freshness row with the observed local time when provided', () => {
+    render(<RiskSummary risk={brief.risk} observedAt={brief.metar.observedAt} />);
+    expect(screen.getByText(/^Observed at \d{2}:\d{2} LT;/)).toBeInTheDocument();
+  });
 });

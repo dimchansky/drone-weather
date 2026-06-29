@@ -25,6 +25,7 @@ export interface Brief {
   icing: IcingBand;
   cloudBase: ResolvedCloudBase;
   risk: RiskSummary;
+  opsCeilingM: number; // kept so the risk can be recomputed live (freshness)
   fetchedAt: Date;
 }
 
@@ -58,6 +59,7 @@ export function assembleBrief(input: AssembleInput): Brief {
     icingReason: icing.reason,
     distanceKm: input.distanceKm ?? input.station?.distanceKm ?? null,
     opsCeilingM,
+    now,
   });
 
   return {
@@ -70,6 +72,7 @@ export function assembleBrief(input: AssembleInput): Brief {
     icing,
     cloudBase,
     risk,
+    opsCeilingM,
     fetchedAt: now,
   };
 }
