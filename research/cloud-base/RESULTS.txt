@@ -1,0 +1,99 @@
+
+====================================================================================================================================
+CLOUD-BASE / WET-LAYER METHOD COMPARISON  (heights in m AGL unless noted)
+A=Espy 125×spread (parcel LCL) · Bapp/Brich=env saturation (app vs +975hPa levels) · D=model cloud≥50% · E=app resolveCloudBase
+====================================================================================================================================
+ICAO  T/Td/spr     METARlow      ceil   A      Bapp   Brich  D      E(app)          wx/notes                      
+------------------------------------------------------------------------------------------------------------------------------------
+BIKF  9/7/2        1700ft/518m   4800   250    197    163    0      actual:518                                    
+EGLL  19/8/11      4100ft/1250m  —      1375   —      —      0      actual:1250                                   
+EGPF  15/11/4      1700ft/518m   3300   500    503    461    0      actual:518                                    
+EHAM  22/16/6      1800ft/549m   —      750    —      —      —      actual:549                                    
+EIDW  16/10/6      1800ft/549m   3600   750    495    487    0      actual:549                                    
+EKCH  22/16/6      clear         —      750    —      —      —      estimate:750                                  
+ENGM  22/12/10     4100ft/1250m  —      1250   —      —      —      actual:1250                                   
+FAOR  17/6/11      CAVOK         —      1375   —      —      —      cavok:1524                                    
+KABQ  24/1/23      13000ft/3962m —      2875   —      —      —      actual:3962     inv+0.6@365m                  
+KACV  12/11/1      1200ft/366m   1200   125    —      —      —      actual:366      inv+2.6@729m                  
+KATL  25/22/3      clear         —      375    —      —      —      estimate:375    inv+1.2@291m                  
+KDEN  17/3/14      5000ft/1524m  —      1750   —      —      —      actual:1524     inv+0.6@275m                  
+KMCI  27/22/5      25000ft/7620m —      625    —      —      —      actual:7620                                   
+KMRY  14/11/3      1000ft/305m   1000   375    54     54     0      actual:305      inv+2.9@719m                  
+KORD  25/22/3      2000ft/610m   —      375    —      —      —      actual:610                                    
+KPHX  29/-6/35     clear         —      4375   —      —      —      estimate:4375   inv+1.1@152m                  
+KSFO  13/11/2      800ft/244m    —      250    —      —      —      actual:244      inv+7.4@764m                  
+KSMX  11/11/0      900ft/274m    900    0      0      0(sfc) —      actual:274      inv+6.8@694m BR               
+LCLK  33/17/16     CAVOK         —      2000   —      —      —      cavok:1524                                    
+LEMD  25/13/12     CAVOK         —      1500   —      —      —      cavok:1524                                    
+LGAV  31/13/18     CAVOK         —      2250   —      —      —      cavok:1524                                    
+LIRF  33/20/13     CAVOK         —      1625   —      —      —      cavok:1524                                    
+LLBG  31/21/10     CAVOK         —      1250   —      —      —      cavok:1524                                    
+NZAA  10/6/4       clear         —      500    —      —      —      estimate:500    inv+1.2@238m                  
+OEJN  40/15/25     CAVOK         —      3125   —      —      —      cavok:1524                                    
+OERK  41/-6/47     CAVOK         —      5875   —      —      —      cavok:1524                                    
+OMDB  39/21/18     CAVOK         —      2250   —      —      —      cavok:1524                                    
+RJTT  25/21/4      2000ft/610m   —      500    1204   1204   1516   actual:610                                    
+RKSI  25/20/5      CAVOK         —      625    —      —      —      cavok:1524      inv+2.8@318.62m               
+RPLL  31/25/6      2300ft/701m   —      750    —      1861   2007   actual:701      inv+2.0@56m                   
+SAEZ  5/3/2        CAVOK         —      250    —      —      —      cavok:1524      inv+3.6@148m                  
+SBGR  19/14/5      CAVOK         —      625    —      —      —      cavok:1524      inv+3.8@322m                  
+SLLP  -2/-2/0      200ft/61m     —      0      —      —      —      actual:61       WET≤120 BCFG                  
+VABB  29/25/4      1800ft/549m   9000   500    400    389    479    actual:549      BR                            
+VHHH  31/23/8      1500ft/457m   —      1000   —      —      —      actual:457                                    
+VTBS  32/24/8      2000ft/610m   —      1000   —      —      —      actual:610      inv+2.5@42m                   
+WSSS  31/25/6      1800ft/549m   30000  750    —      —      —      actual:549                                    
+YSSY  16/13/3      2100ft/640m   4400   375    —      —      —      actual:640                                    
+ZBAA  27/21/6      CAVOK         —      750    —      —      —      cavok:1524      inv+3.5@18m                   
+
+================================================================================
+CLOUD-BASE ERROR vs METAR lowest layer  (n=22 measurable stations)
+================================================================================
+method                      n    MAE(m)    bias(m)   
+A  Espy 125×spread          22   528       -345      
+B  env-sat (app levels)     7    237       -67       
+B  env-sat (+975 levels)    8    364       74        
+D  model cloud≥50%          8    678       -125      
+E  app resolveCloudBase     22   0         0         
+
+CEILING SUBSET (BKN/OVC present, n=9) — same MAE, restricted:
+  A  Espy:            MAE 1584 m (n=9)
+  B  env-sat(+975):   MAE 889 m (n=6)
+  D  model cloud≥50%: MAE 1227 m (n=5)
+  E  app:             MAE 1497 m (n=9)
+
+================================================================================
+DRONE-BAND (≤120 m) WET-AIR DETECTION vs METAR truth  (TP/FN want↑/↓, FP=false alarm)
+================================================================================
+truth: 1/39 stations have wet air in the 0–120 m band
+A  Espy ≤120 m                TP 1   FN 0   FP 1   TN 37  
+B  env-sat(+975) ≤120 m       TP 0   FN 1   FP 2   TN 36  
+D  model cloud≥50% ≤150 m     TP 0   FN 1   FP 5   TN 33  
+A or B (≤120 m, combined)     TP 1   FN 0   FP 2   TN 36  
+
+LOW WET LAYER ≤500 m detection  (truth: 7/39 stations):
+A  Espy ≤500 m                TP 6   FN 1   FP 8   TN 24  
+B  env-sat(+975) ≤500 m       TP 3   FN 4   FP 3   TN 29  
+D  model cloud≥50% ≤500 m     TP 2   FN 5   FP 4   TN 28  
+A and METAR not CAVOK/clear   TP 6   FN 1   FP 5   TN 27  
+
+================================================================================
+INVERSION & A↔B DIVERGENCE (where the classic formula is most suspect)
+================================================================================
+KABQ  inv +0.6°C@365m     A=2875   Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+KACV  inv +2.6°C@729m     A=125    Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+KATL  inv +1.2°C@291m     A=375    Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+KDEN  inv +0.6°C@275m     A=1750   Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+KMRY  inv +2.9°C@719m     A=375    Brich=54     C:130m(77m/°C)        environmental spread closes with height           
+KPHX  inv +1.1°C@152m     A=4375   Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+KSFO  inv +7.4°C@764m     A=250    Brich=—      C:1861m(665m/°C)      environmental spread closes with height           
+KSMX  inv +6.8°C@694m     A=0      Brich=0      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+NZAA  inv +1.2°C@238m     A=500    Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+RJTT  no-inv              A=500    Brich=1204   C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+RKSI  inv +2.8°C@318.62m  A=625    Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+RPLL  inv +2.0°C@56m      A=750    Brich=1861   C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+SAEZ  inv +3.6°C@148m     A=250    Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+SBGR  inv +3.8°C@322m     A=625    Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+SLLP  no-inv              A=0      Brich=—      C:invalid             insufficient levels                               
+VTBS  inv +2.5°C@42m      A=1000   Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+ZBAA  inv +3.5°C@18m      A=750    Brich=—      C:invalid             spread not closing with height (inversion/stable) — lifted-parcel LCL is misleading
+
