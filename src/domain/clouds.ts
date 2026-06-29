@@ -3,12 +3,29 @@
 
 import type { CloudCover, CloudLayer, Metar, VerticalProfile } from './types';
 import { ftToM, mToFt } from './units';
+import { detectInversion } from './profile';
+import { spreadWidensWithHeight } from './saturation';
 
 /** Covers that constitute a ceiling (broken/overcast or sky obscured). */
 const CEILING_COVERS = new Set<CloudCover>(['BKN', 'OVC', 'VV']);
 
+/** Codes that are an explicit observation of no significant cloud. */
+const SKY_CLEAR_COVERS = new Set<CloudCover>(['SKC', 'CLR', 'NSC', 'NCD']);
+
 /** Model cloud-cover (%) at a pressure level that counts as a significant cloud base. */
 const SIGNIFICANT_CLOUD_PCT = 50;
+
+// --- Espy estimate gating (anti-false-precision). See docs/cloud-base-research.md §3.3/§5. ---
+/** Espy base at/above this (≈ spread ≥ 12 °C) is false precision → report "no significant low cloud". */
+const HIGH_BASE_M = 1500;
+/** "Spread is large" for the model-corroborated gate (Espy ≈ 1000 m). */
+const DRY_SPREAD_C = 8;
+/** Model low-cloud cover below this counts as effectively no low cloud. */
+const WEAK_LOW_CLOUD_PCT = 25;
+/** Surface spread at/below this means a low Espy base is meaningful — keep the estimate. */
+const NEAR_SAT_SPREAD_C = 2;
+/** Band (m AGL) scanned for model low cloud when deciding whether to gate. */
+const LOW_CLOUD_CAP_M = 2000;
 
 /** Oktas (eighths of sky) for each cover, for display/interpretation. */
 export const COVER_OKTAS: Record<string, string> = {
@@ -47,13 +64,15 @@ export function estimatedCloudBaseM(tempC: number, dewpC: number): number {
   return Math.max(0, 125 * (tempC - dewpC));
 }
 
-export type CloudBaseKind = 'actual' | 'cavok' | 'model' | 'estimate' | 'none';
+export type CloudBaseKind = 'actual' | 'cavok' | 'model' | 'estimate' | 'none-low' | 'none';
 
 export interface ResolvedCloudBase {
   kind: CloudBaseKind;
   baseFt: number | null;
   baseM: number | null;
   note: string;
+  /** Spread-based estimate is unreliable here (inversion / spread not closing with height). */
+  unreliable?: boolean;
 }
 
 /**
@@ -61,7 +80,9 @@ export interface ResolvedCloudBase {
  *   1. actual METAR cloud layers (lowest reported base),
  *   2. CAVOK (no significant cloud below 5000 ft AGL),
  *   3. model cloud profile (lowest pressure level with significant cloud — coarse),
- *   4. estimate from dew point spread (clearly approximate).
+ *   4. estimate from dew point spread (clearly approximate), GATED so a large/dry spread with no
+ *      model or observed low cloud reports "no significant low cloud" instead of a false-precise
+ *      multi-km number (see docs/cloud-base-research.md §3.3).
  */
 export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): ResolvedCloudBase {
   const reported = metar.clouds.filter((l) => l.baseFt != null);
@@ -87,6 +108,17 @@ export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): Resol
     };
   }
 
+  // Explicit sky-clear codes (SKC/CLR/NSC/NCD) are an OBSERVATION of no significant cloud — trust
+  // them over the model or a spread estimate (which would otherwise invent a base from humidity).
+  if (metar.clouds.some((c) => SKY_CLEAR_COVERS.has(c.cover))) {
+    return {
+      kind: 'none-low',
+      baseFt: null,
+      baseM: null,
+      note: 'Sky reported clear (SKC/CLR/NSC/NCD) — no significant low cloud.',
+    };
+  }
+
   // Model tier: lowest pressure level reporting significant cloud cover. Coarse (model-level
   // resolution), so it can't pinpoint a sub-500 m base — labelled accordingly.
   if (profile?.source === 'model') {
@@ -104,12 +136,53 @@ export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): Resol
   }
 
   if (metar.tempC != null && metar.dewpC != null) {
+    const spread = metar.tempC - metar.dewpC;
     const m = estimatedCloudBaseM(metar.tempC, metar.dewpC);
+    const baseFt = Math.round(mToFt(m));
+    const baseM = Math.round(m);
+
+    // Spread-based reasoning is unreliable through an inversion / when the spread widens aloft.
+    const unreliable =
+      profile != null &&
+      (detectInversion(profile.levels) != null || spreadWidensWithHeight(profile.levels));
+    const invNote = unreliable
+      ? ' Temperature inversion / stable layer aloft — treat the spread-based base as unreliable.'
+      : '';
+
+    // Model low-cloud context (the model tier above only fires at ≥ 50 %; here it didn't).
+    const lowCloud =
+      profile?.source === 'model'
+        ? profile.levels
+            .filter((l) => l.altM <= LOW_CLOUD_CAP_M && l.cloudPct != null)
+            .map((l) => l.cloudPct as number)
+        : [];
+    const modelLowMaxPct = lowCloud.length ? Math.max(...lowCloud) : null;
+
+    // Gate false precision: a dry/large spread with no model or observed low cloud means clear
+    // sky or a high base — don't present a precise multi-km number. A near-saturated surface keeps
+    // the (low, meaningful) estimate.
+    const surfaceNearSat = spread <= NEAR_SAT_SPREAD_C;
+    const gate =
+      !surfaceNearSat &&
+      (m >= HIGH_BASE_M ||
+        (modelLowMaxPct != null && modelLowMaxPct < WEAK_LOW_CLOUD_PCT && spread >= DRY_SPREAD_C));
+
+    if (gate) {
+      return {
+        kind: 'none-low',
+        baseFt,
+        baseM,
+        note: `No significant low cloud expected — clear sky or a high base (rough spread estimate ≈ ${baseM} m).${invNote}`,
+        unreliable,
+      };
+    }
+
     return {
       kind: 'estimate',
-      baseFt: Math.round(mToFt(m)),
-      baseM: Math.round(m),
-      note: 'Estimated from dew point spread (≈125 m × (T − Td)) — approximate',
+      baseFt,
+      baseM,
+      note: `Estimated from dew point spread (≈125 m × (T − Td)) — approximate.${invNote}`,
+      unreliable,
     };
   }
 

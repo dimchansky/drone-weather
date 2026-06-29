@@ -20,6 +20,14 @@ const modelProfile = (cloudByAlt: Record<number, number | null>): VerticalProfil
   return { levels, source: 'model', note: '' };
 };
 
+/** Model profile from explicit per-level fields (for inversion / saturation cases). */
+const lvlProfile = (rows: Partial<ProfileLevel>[]): VerticalProfile => {
+  const levels: ProfileLevel[] = rows
+    .map((r) => ({ altM: 0, tempC: 15, dewpC: null, rhPct: null, cloudPct: null, source: 'model' as const, ...r }))
+    .sort((a, b) => a.altM - b.altM);
+  return { levels, source: 'model', note: '' };
+};
+
 function metar(partial: Partial<Metar>): Metar {
   return {
     icao: 'TEST',
@@ -97,16 +105,47 @@ describe('resolveCloudBase priority', () => {
     expect(r.baseM).toBe(690); // first level ≥ 50% cloud
   });
 
-  it('skips the model tier when no level has significant cloud', () => {
-    const profile = modelProfile({ 0: 0, 450: 10, 690: 20 });
-    const r = resolveCloudBase(metar({ tempC: 23, dewpC: 7 }), profile);
+  it('4. estimates from a moderate spread when no layers/CAVOK/model cloud (low, meaningful base)', () => {
+    const r = resolveCloudBase(metar({ tempC: 18, dewpC: 12 })); // spread 6 → 750 m
     expect(r.kind).toBe('estimate');
+    expect(r.baseM).toBe(750);
+    expect(r.unreliable).toBeFalsy();
   });
 
-  it('4. estimates from spread when no layers, no CAVOK, no model cloud', () => {
-    const r = resolveCloudBase(metar({ tempC: 23, dewpC: 7 }));
+  it('keeps a low estimate when the surface is near-saturated (small spread)', () => {
+    const r = resolveCloudBase(metar({ tempC: 12, dewpC: 11 })); // spread 1 → 125 m
     expect(r.kind).toBe('estimate');
-    expect(r.baseM).toBe(2000);
+    expect(r.baseM).toBe(125);
+  });
+
+  it('GATES a large dry spread to none-low (clear / high base), even without a model', () => {
+    const r = resolveCloudBase(metar({ tempC: 30, dewpC: -5 })); // spread 35 → 4375 m
+    expect(r.kind).toBe('none-low');
+    expect(r.note).toMatch(/no significant low cloud/i);
+  });
+
+  it('gates to none-low when the model shows no low cloud and the spread is large', () => {
+    const profile = modelProfile({ 0: 0, 450: 10, 690: 20 }); // max low cloud 20% < 25%
+    const r = resolveCloudBase(metar({ tempC: 23, dewpC: 7 }), profile); // spread 16
+    expect(r.kind).toBe('none-low');
+  });
+
+  it('flags the spread-based estimate as unreliable through an inversion', () => {
+    const profile = lvlProfile([
+      { altM: 0, tempC: 18, dewpC: 12 },
+      { altM: 100, tempC: 19.5, dewpC: 6 }, // warmer + drier aloft = inversion, spread widens
+    ]);
+    const r = resolveCloudBase(metar({ tempC: 18, dewpC: 12 }), profile); // spread 6 → 750 m
+    expect(r.kind).toBe('estimate');
+    expect(r.unreliable).toBe(true);
+    expect(r.note).toMatch(/inversion|unreliable/i);
+  });
+
+  it('treats an explicit sky-clear report (CLR/NCD) as no significant low cloud, not an estimate', () => {
+    const r = resolveCloudBase(metar({ clouds: [makeCloudLayer('CLR', null)], tempC: 25, dewpC: 22 }));
+    expect(r.kind).toBe('none-low');
+    expect(r.baseM).toBeNull();
+    expect(r.note).toMatch(/clear/i);
   });
 
   it('actual layers still win over a model profile', () => {

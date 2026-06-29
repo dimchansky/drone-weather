@@ -20,7 +20,7 @@ KDEN  17/3/14      5000ft/1524m  —      1750   —      —      —      actu
 KMCI  27/22/5      25000ft/7620m —      625    —      —      —      actual:7620                                   
 KMRY  14/11/3      1000ft/305m   1000   375    54     54     0      actual:305      inv+2.9@719m                  
 KORD  25/22/3      2000ft/610m   —      375    —      —      —      actual:610                                    
-KPHX  29/-6/35     clear         —      4375   —      —      —      estimate:4375   inv+1.1@152m                  
+KPHX  29/-6/35     clear         —      4375   —      —      —      none-low:4375   inv+1.1@152m                  
 KSFO  13/11/2      800ft/244m    —      250    —      —      —      actual:244      inv+7.4@764m                  
 KSMX  11/11/0      900ft/274m    900    0      0      0(sfc) —      actual:274      inv+6.8@694m BR               
 LCLK  33/17/16     CAVOK         —      2000   —      —      —      cavok:1524                                    
