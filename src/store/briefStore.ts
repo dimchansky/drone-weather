@@ -39,6 +39,8 @@ export type BriefStatus = 'idle' | 'loading' | 'ready' | 'error';
 interface LoadOptions {
   selectedIcao?: string | null;
   opsCeilingM?: number;
+  /** Bypass the fetch cache and revalidate (Refresh action). */
+  force?: boolean;
 }
 
 interface BriefState {
@@ -60,15 +62,17 @@ export const useBriefStore = create<BriefState>((set, get) => ({
   load: async (coord, opts = {}) => {
     set({ status: 'loading', error: null });
     const now = new Date();
+    const force = opts.force;
     try {
-      const nearby = await nearestStations(coord, SEARCH_RADIUS_KM);
+      const nearby = await nearestStations(coord, SEARCH_RADIUS_KM, { force });
 
       if (nearby.length > 0) {
+        // Prefer the user's pinned station if it's still in range; else nearest.
         const chosen =
           (opts.selectedIcao && nearby.find((n) => n.metar.icao === opts.selectedIcao)) || nearby[0];
         const [taf, modelLevels] = await Promise.all([
-          getTaf(chosen.metar.icao).catch(() => null),
-          getProfile(coord).catch(() => []),
+          getTaf(chosen.metar.icao, { force }).catch(() => null),
+          getProfile(coord, { force }).catch(() => []),
         ]);
         const station: StationRef = {
           icao: chosen.metar.icao,
@@ -93,8 +97,8 @@ export const useBriefStore = create<BriefState>((set, get) => ({
 
       // No nearby METAR station — fall back to a model-only brief.
       const [surface, modelLevels] = await Promise.all([
-        getSurfaceFallback(coord),
-        getProfile(coord).catch(() => []),
+        getSurfaceFallback(coord, { force }),
+        getProfile(coord, { force }).catch(() => []),
       ]);
       const brief = assembleBrief({
         coord,

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Coord } from '../domain/types';
 
-export type LocationSource = 'gps' | 'manual';
+export type LocationSource = 'gps' | 'manual' | 'pasted';
 
 interface LocationState {
   coord: Coord | null;
@@ -23,6 +23,10 @@ export const useLocationStore = create<LocationState>()(
       setCoord: (coord, source) => set({ coord, source, selectedIcao: null }),
       setSelectedIcao: (selectedIcao) => set({ selectedIcao }),
     }),
-    { name: 'drone-weather-location' },
+    {
+      name: 'drone-weather-location',
+      // Persist only user-chosen state (no transient/derived fields).
+      partialize: (s) => ({ coord: s.coord, source: s.source, selectedIcao: s.selectedIcao }),
+    },
   ),
 );

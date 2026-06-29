@@ -37,6 +37,15 @@ export const useSettingsStore = create<SettingsState>()(
         set({ theme });
       },
     }),
-    { name: 'drone-weather-settings' },
+    {
+      name: 'drone-weather-settings',
+      // Persist only user preferences (the setters are re-created from the initializer).
+      partialize: (s) => ({
+        windUnit: s.windUnit,
+        altUnit: s.altUnit,
+        opsCeilingM: s.opsCeilingM,
+        theme: s.theme,
+      }),
+    },
   ),
 );
