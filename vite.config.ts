@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
+import { configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -34,5 +35,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // Never pick up tests from agent worktrees / copies under .claude (keeps counts honest).
+    exclude: [...configDefaults.exclude, '.claude/**'],
   },
 });
