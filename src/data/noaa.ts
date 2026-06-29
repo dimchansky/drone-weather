@@ -36,9 +36,12 @@ export interface FetchDeps {
   fetchJson?: (url: string) => Promise<unknown>;
   now?: Date;
   baseUrl?: string;
+  /** Bypass the cache TTL and revalidate (Refresh). */
+  force?: boolean;
 }
 
-const defaultFetchJson = (url: string): Promise<unknown> => cachedFetchJson(url, METAR_TTL_MS);
+const fetcher = (deps: FetchDeps) =>
+  deps.fetchJson ?? ((url: string) => cachedFetchJson(url, METAR_TTL_MS, { force: deps.force }));
 
 function buildMetar(j: NoaaMetar, now: Date): Metar {
   const metar = parseMetar(j.rawOb ?? '', {
@@ -57,7 +60,7 @@ function buildMetar(j: NoaaMetar, now: Date): Metar {
 }
 
 export async function getMetar(icao: string, deps: FetchDeps = {}): Promise<Metar> {
-  const fj = deps.fetchJson ?? defaultFetchJson;
+  const fj = fetcher(deps);
   const now = deps.now ?? new Date();
   const base = deps.baseUrl ?? PROXY_BASE;
   const arr = (await fj(`${base}/metar?ids=${encodeURIComponent(icao)}`)) as NoaaMetar[];
@@ -66,7 +69,7 @@ export async function getMetar(icao: string, deps: FetchDeps = {}): Promise<Meta
 }
 
 export async function getTaf(icao: string, deps: FetchDeps = {}): Promise<Taf | null> {
-  const fj = deps.fetchJson ?? defaultFetchJson;
+  const fj = fetcher(deps);
   const base = deps.baseUrl ?? PROXY_BASE;
   const arr = (await fj(`${base}/taf?ids=${encodeURIComponent(icao)}`)) as NoaaTaf[];
   if (!Array.isArray(arr) || arr.length === 0) return null;
@@ -96,7 +99,7 @@ export async function nearestStations(
   radiusKm = 50,
   deps: FetchDeps = {},
 ): Promise<NearbyStation[]> {
-  const fj = deps.fetchJson ?? defaultFetchJson;
+  const fj = fetcher(deps);
   const now = deps.now ?? new Date();
   const base = deps.baseUrl ?? PROXY_BASE;
 

@@ -59,6 +59,32 @@ describe('cachedFetchJson — caching', () => {
   });
 });
 
+describe('cachedFetchJson — force / revalidate', () => {
+  it('bypasses a fresh cache hit when force is set', async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      return ok({ n: calls });
+    };
+    await cachedFetchJson('u', 100_000, { fetchImpl, now: () => 1000 }); // populate cache
+    const forced = await cachedFetchJson('u', 100_000, { fetchImpl, now: () => 1500, force: true });
+    expect(calls).toBe(2); // refetched despite being well within TTL
+    expect(forced).toEqual({ n: 2 });
+  });
+
+  it('still returns stale cached data if a forced refresh fails', async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      if (calls === 1) return ok({ n: 1 });
+      throw new Error('network down');
+    };
+    await cachedFetchJson('u', 100_000, { fetchImpl, now: () => 1000 });
+    const stale = await cachedFetchJson('u', 100_000, { fetchImpl, now: () => 1500, force: true });
+    expect(stale).toEqual({ n: 1 });
+  });
+});
+
 describe('cachedFetchJson — defensive parsing', () => {
   it('resolves to undefined for an empty body (HTTP 204)', async () => {
     const fetchImpl = async () => raw(204, '');

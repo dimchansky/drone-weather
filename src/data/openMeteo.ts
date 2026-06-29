@@ -119,13 +119,16 @@ export function parseProfile(data: OpenMeteoResponse | undefined, now: Date): Pr
 export interface OpenMeteoDeps {
   fetchJson?: (url: string) => Promise<unknown>;
   now?: Date;
+  /** Bypass the cache TTL and revalidate (Refresh). */
+  force?: boolean;
 }
 
-const defaultFetchJson = (url: string): Promise<unknown> => cachedFetchJson(url, OM_TTL_MS);
+const fetcher = (deps: OpenMeteoDeps) =>
+  deps.fetchJson ?? ((url: string) => cachedFetchJson(url, OM_TTL_MS, { force: deps.force }));
 
 /** Fetch the vertical profile (raw model levels) for a location. */
 export async function getProfile(coord: Coord, deps: OpenMeteoDeps = {}): Promise<ProfileLevel[]> {
-  const fj = deps.fetchJson ?? defaultFetchJson;
+  const fj = fetcher(deps);
   const now = deps.now ?? new Date();
   const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
   return parseProfile(data, now);
@@ -146,7 +149,7 @@ export async function getSurfaceFallback(
   coord: Coord,
   deps: OpenMeteoDeps = {},
 ): Promise<SurfaceFallback> {
-  const fj = deps.fetchJson ?? defaultFetchJson;
+  const fj = fetcher(deps);
   const now = deps.now ?? new Date();
   const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
   const times = timesOf(data);

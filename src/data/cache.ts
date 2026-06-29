@@ -70,6 +70,8 @@ export function writeCache<T>(key: string, data: T, nowMs: number): void {
 export interface CacheOptions {
   fetchImpl?: (url: string) => Promise<FetchLike>;
   now?: () => number;
+  /** Bypass the fresh-cache check and revalidate from the network (used by Refresh). */
+  force?: boolean;
 }
 
 /**
@@ -91,7 +93,7 @@ export async function cachedFetchJson<T = unknown>(
   const nowMs = (opts.now ?? Date.now)();
 
   const cached = readCache<T>(url);
-  if (cached && nowMs - cached.t < ttlMs) return cached.data;
+  if (!opts.force && cached && nowMs - cached.t < ttlMs) return cached.data;
 
   let res: FetchLike;
   try {
