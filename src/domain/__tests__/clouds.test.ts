@@ -98,6 +98,11 @@ describe('resolveCloudBase priority', () => {
     expect(r.baseFt).toBe(5000);
   });
 
+  it('renders the CAVOK note in the selected altitude unit', () => {
+    expect(resolveCloudBase(metar({ cavok: true })).note).toMatch(/below 1524 m AGL/);
+    expect(resolveCloudBase(metar({ cavok: true }), undefined, 'ft').note).toMatch(/below 5000 ft AGL/);
+  });
+
   it('3. uses the model cloud profile (lowest level with significant cloud) before estimating', () => {
     const profile = modelProfile({ 0: 0, 450: 10, 690: 70, 930: 90 });
     const r = resolveCloudBase(metar({ tempC: 23, dewpC: 7 }), profile);

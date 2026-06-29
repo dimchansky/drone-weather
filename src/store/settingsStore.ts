@@ -1,9 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { WindUnit } from '../domain/units';
-export type { WindUnit };
-export type AltUnit = 'm' | 'ft';
+import type { WindUnit, AltUnit } from '../domain/units';
+export type { WindUnit, AltUnit };
 export type ThemePref = 'auto' | 'light' | 'dark';
 
 interface SettingsState {

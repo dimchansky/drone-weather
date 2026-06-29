@@ -12,7 +12,7 @@ import type {
   Severity,
   VerticalProfile,
 } from './types';
-import { ktToMs, mToFt, round, fmtWindSpeed, type WindUnit } from './units';
+import { ktToMs, mToFt, round, fmtWindSpeed, fmtAlt, fmtAltFt, type WindUnit, type AltUnit } from './units';
 import { ceilingFt } from './clouds';
 import { envSaturationHeightM } from './saturation';
 import { rhFromDewPoint } from './humidity';
@@ -110,6 +110,8 @@ export interface MoistureInputs {
   opsCeilingM?: number;
   /** Vertical profile for the coarse model elevated near-saturation supplement. */
   profile?: VerticalProfile | null;
+  /** Altitude display unit for cloud-base / layer heights in the reason text. */
+  altUnit?: AltUnit;
   now?: Date;
 }
 
@@ -127,6 +129,7 @@ export function moistureRisk(metar: Metar, opts: MoistureInputs = {}): RiskCompo
   const label = 'Moisture & wetness';
   const opsCeilingM = opts.opsCeilingM ?? DEFAULT_OPS_CEILING_M;
   const model = opts.model ?? null;
+  const altUnit = opts.altUnit ?? 'm';
   const now = opts.now ?? new Date();
 
   const candidates: { severity: Severity; reason: string; value?: string }[] = [];
@@ -158,9 +161,9 @@ export function moistureRisk(metar: Metar, opts: MoistureInputs = {}): RiskCompo
   // Cloud immersion — resolved cloud base within / just above the ops band.
   const baseM = opts.cloudBaseM;
   if (baseM != null && baseM <= opsCeilingM) {
-    candidates.push({ severity: 'HIGH', reason: `Cloud base ~${round(baseM)} m is within your ${round(opsCeilingM)} m ops band — you would fly into cloud.`, value: `base ${round(baseM)} m` });
+    candidates.push({ severity: 'HIGH', reason: `Cloud base ~${fmtAlt(baseM, altUnit)} is within your ${fmtAlt(opsCeilingM, altUnit)} ops band — you would fly into cloud.`, value: `base ${fmtAlt(baseM, altUnit)}` });
   } else if (baseM != null && baseM <= opsCeilingM + 150) {
-    candidates.push({ severity: 'CAUTION', reason: `Cloud base ~${round(baseM)} m is just above your ops band.`, value: `base ${round(baseM)} m` });
+    candidates.push({ severity: 'CAUTION', reason: `Cloud base ~${fmtAlt(baseM, altUnit)} is just above your ops band.`, value: `base ${fmtAlt(baseM, altUnit)}` });
   }
 
   // Near-saturation / dew / condensation.
@@ -199,8 +202,8 @@ export function moistureRisk(metar: Metar, opts: MoistureInputs = {}): RiskCompo
     if (satM != null) {
       candidates.push({
         severity: 'CAUTION',
-        reason: `Model: near-saturated layer ~${round(satM)} m AGL (coarse) — damp air within your climb.`,
-        value: `~${round(satM)} m`,
+        reason: `Model: near-saturated layer ~${fmtAlt(satM, altUnit)} AGL (coarse) — damp air within your climb.`,
+        value: `~${fmtAlt(satM, altUnit)}`,
       });
     }
   }
@@ -220,9 +223,13 @@ export function moistureRisk(metar: Metar, opts: MoistureInputs = {}): RiskCompo
   return { key: 'moisture', label, severity: worst, value: driver.value, reason: driver.reason };
 }
 
-export function ceilingRisk(metar: Metar, opsCeilingM = DEFAULT_OPS_CEILING_M): RiskComponent {
+export function ceilingRisk(
+  metar: Metar,
+  opsCeilingM = DEFAULT_OPS_CEILING_M,
+  altUnit: AltUnit = 'm',
+): RiskComponent {
   if (metar.cavok) {
-    return { key: 'ceiling', label: 'Cloud ceiling', severity: 'GOOD', reason: 'CAVOK — no significant cloud below 5000 ft AGL.' };
+    return { key: 'ceiling', label: 'Cloud ceiling', severity: 'GOOD', reason: `CAVOK — no significant cloud below ${fmtAltFt(5000, altUnit)} AGL.` };
   }
   const ceil = ceilingFt(metar.clouds);
   if (ceil == null) {
@@ -233,9 +240,9 @@ export function ceilingRisk(metar: Metar, opsCeilingM = DEFAULT_OPS_CEILING_M): 
     ceil < opsFt ? 'NOFLY' : ceil < opsFt + 300 ? 'HIGH' : ceil < 1500 ? 'CAUTION' : 'GOOD';
   const reason =
     severity === 'NOFLY'
-      ? `Ceiling ${ceil} ft AGL is below your ${round(opsCeilingM)} m operating band — you would be in or above cloud.`
-      : `Ceiling ${ceil} ft AGL.`;
-  return { key: 'ceiling', label: 'Cloud ceiling', severity, value: `${ceil} ft`, reason };
+      ? `Ceiling ${fmtAltFt(ceil, altUnit)} AGL is below your ${fmtAlt(opsCeilingM, altUnit)} operating band — you would be in or above cloud.`
+      : `Ceiling ${fmtAltFt(ceil, altUnit)} AGL.`;
+  return { key: 'ceiling', label: 'Cloud ceiling', severity, value: fmtAltFt(ceil, altUnit), reason };
 }
 
 export function icingRiskComponent(worst: Severity, reason: string): RiskComponent {
@@ -311,6 +318,8 @@ export interface RiskInputs {
   source?: SourceMode;
   /** Display unit for wind/gust values + reasons (UI preference). Canonical stays in knots. */
   windUnit?: WindUnit;
+  /** Display unit for altitude values in ceiling/cloud reasons (UI preference). */
+  altUnit?: AltUnit;
   /** Reference time for freshness + the dew time-of-day amplifier; defaults to now. */
   now?: Date;
 }
@@ -320,12 +329,13 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
   const now = inputs.now ?? new Date();
 
   const windUnit = inputs.windUnit ?? 'kt';
+  const altUnit = inputs.altUnit ?? 'm';
   const weather: RiskComponent[] = [
     windRisk(metar.wind.speedKt, metar.wind.dirDeg, windUnit),
     gustRisk(metar.wind.speedKt, metar.wind.gustKt, windUnit),
     visibilityRisk(metar.visibilityM),
-    moistureRisk(metar, { model: inputs.model, cloudBaseM: inputs.cloudBaseM, profile: inputs.profile, opsCeilingM, now }),
-    ceilingRisk(metar, opsCeilingM),
+    moistureRisk(metar, { model: inputs.model, cloudBaseM: inputs.cloudBaseM, profile: inputs.profile, opsCeilingM, altUnit, now }),
+    ceilingRisk(metar, opsCeilingM, altUnit),
     icingRiskComponent(icingWorst, icingReason),
   ];
 

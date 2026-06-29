@@ -73,6 +73,37 @@ describe('wind/gust display unit', () => {
   });
 });
 
+describe('altitude display unit (ceiling / cloud-base reasons)', () => {
+  const lowCeil = () => m('EGLL 281200Z 24008KT 4000 BKN003 10/09 Q1008'); // BKN003 = 300 ft
+
+  it('ceilingRisk formats ceiling + ops band in the chosen unit', () => {
+    expect(ceilingRisk(lowCeil()).reason).toMatch(/91 m AGL/); // default m
+    expect(ceilingRisk(lowCeil()).value).toBe('91 m');
+    const ft = ceilingRisk(lowCeil(), 120, 'ft');
+    expect(ft.reason).toMatch(/300 ft AGL/);
+    expect(ft.reason).toMatch(/394 ft operating band/);
+    expect(ft.value).toBe('300 ft');
+  });
+
+  it('ceilingRisk CAVOK note respects the unit', () => {
+    const cavok = m('LFPG 281200Z 27005KT CAVOK 23/07 Q1015');
+    expect(ceilingRisk(cavok).reason).toMatch(/below 1524 m AGL/);
+    expect(ceilingRisk(cavok, 120, 'ft').reason).toMatch(/below 5000 ft AGL/);
+  });
+
+  it('moistureRisk cloud-immersion reason uses the chosen unit', () => {
+    const base = m('EGLL 281200Z 27006KT 9999 SCT004 12/11 Q1010');
+    expect(moistureRisk(base, { cloudBaseM: 90, opsCeilingM: 120 }).reason).toMatch(/~90 m is within your 120 m/);
+    const ft = moistureRisk(base, { cloudBaseM: 90, opsCeilingM: 120, altUnit: 'ft' });
+    expect(ft.reason).toMatch(/~295 ft is within your 394 ft/);
+  });
+
+  it('assessRisk threads altUnit into the ceiling component', () => {
+    const r = assessRisk({ metar: lowCeil(), icingWorst: 'GOOD', icingReason: 'low', distanceKm: 5, altUnit: 'ft', now: NOW });
+    expect(r.components.find((c) => c.key === 'ceiling')!.value).toBe('300 ft');
+  });
+});
+
 describe('visibilityRisk', () => {
   it('bands by metres', () => {
     expect(visibilityRisk(10000).severity).toBe('GOOD');

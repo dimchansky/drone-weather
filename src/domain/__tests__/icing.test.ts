@@ -15,6 +15,13 @@ describe('icingBand', () => {
     expect(band.reason).toMatch(/low icing risk/i);
   });
 
+  it('formats the band reason in the chosen altitude unit', () => {
+    const metar = m('LFPG 281200Z 27005KT CAVOK 15/02 Q1015');
+    const profile = lapseProfile(metar.tempC!); // tops out at 1000 m
+    expect(icingBand(profile, metar).reason).toMatch(/0–1000 m AGL/);
+    expect(icingBand(profile, metar, 'ft').reason).toMatch(/0–3281 ft AGL/);
+  });
+
   it('is low for cold but DRY air (key: cold alone is not the risk)', () => {
     const metar = m('CYYZ 281200Z 30010KT CAVOK M06/M20 Q1020');
     const band = icingBand(lapseProfile(metar.tempC!), metar);

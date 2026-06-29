@@ -33,3 +33,34 @@ export function fmtWindSpeed(speedKt: number, unit: WindUnit): string {
   if (unit === 'kmh') return `${round(ktToKmh(speedKt), 1)} km/h`;
   return `${round(speedKt)} kt`;
 }
+
+/** User-selectable altitude display unit. */
+export type AltUnit = 'm' | 'ft';
+
+/** Primary altitude in the chosen unit, from a value in METRES, e.g. "1524 m" / "5000 ft". */
+export function fmtAlt(valueM: number, unit: AltUnit): string {
+  return unit === 'ft' ? `${round(mToFt(valueM))} ft` : `${round(valueM)} m`;
+}
+
+/**
+ * Primary altitude in the chosen unit, from a value in FEET. Cloud bases/ceilings are reported
+ * in feet (canonical aviation), so format from feet to avoid an m→ft round-trip drift (e.g. an
+ * exact 800 ft layer would otherwise display as 801 ft).
+ */
+export function fmtAltFt(valueFt: number, unit: AltUnit): string {
+  return unit === 'ft' ? `${round(valueFt)} ft` : `${round(ftToM(valueFt))} m`;
+}
+
+/** Primary + secondary (secondary in parentheses), from METRES, e.g. "1524 m (5000 ft)". */
+export function fmtAltBoth(valueM: number, unit: AltUnit): string {
+  const m = `${round(valueM)} m`;
+  const ft = `${round(mToFt(valueM))} ft`;
+  return unit === 'ft' ? `${ft} (${m})` : `${m} (${ft})`;
+}
+
+/** Primary + secondary, from FEET (canonical aviation), e.g. "244 m (800 ft)". */
+export function fmtAltBothFt(valueFt: number, unit: AltUnit): string {
+  const ft = `${round(valueFt)} ft`;
+  const m = `${round(ftToM(valueFt))} m`;
+  return unit === 'ft' ? `${ft} (${m})` : `${m} (${ft})`;
+}

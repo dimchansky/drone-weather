@@ -2,7 +2,7 @@
 // docs/initial-idea.md §7.5.
 
 import type { CloudCover, CloudLayer, Metar, VerticalProfile } from './types';
-import { ftToM, mToFt } from './units';
+import { ftToM, mToFt, fmtAlt, fmtAltFt, type AltUnit } from './units';
 import { detectInversion } from './profile';
 import { spreadWidensWithHeight } from './saturation';
 
@@ -84,7 +84,11 @@ export interface ResolvedCloudBase {
  *      model or observed low cloud reports "no significant low cloud" instead of a false-precise
  *      multi-km number (see docs/cloud-base-research.md §3.3).
  */
-export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): ResolvedCloudBase {
+export function resolveCloudBase(
+  metar: Metar,
+  profile?: VerticalProfile,
+  altUnit: AltUnit = 'm',
+): ResolvedCloudBase {
   const reported = metar.clouds.filter((l) => l.baseFt != null);
   if (reported.length) {
     const lowest = reported.reduce((a, b) =>
@@ -104,7 +108,7 @@ export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): Resol
       kind: 'cavok',
       baseFt: 5000,
       baseM: Math.round(ftToM(5000)),
-      note: 'CAVOK: no significant cloud below 5000 ft AGL',
+      note: `CAVOK: no significant cloud below ${fmtAltFt(5000, altUnit)} AGL`,
     };
   }
 
@@ -130,7 +134,7 @@ export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): Resol
         kind: 'model',
         baseFt: Math.round(mToFt(lev.altM)),
         baseM: Math.round(lev.altM),
-        note: `Model: ~${Math.round(lev.cloudPct as number)}% cloud near ${Math.round(lev.altM)} m AGL — coarse (model resolution)`,
+        note: `Model: ~${Math.round(lev.cloudPct as number)}% cloud near ${fmtAlt(lev.altM, altUnit)} AGL — coarse (model resolution)`,
       };
     }
   }
@@ -172,7 +176,7 @@ export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): Resol
         kind: 'none-low',
         baseFt,
         baseM,
-        note: `No significant low cloud expected — clear sky or a high base (rough spread estimate ≈ ${baseM} m).${invNote}`,
+        note: `No significant low cloud expected — clear sky or a high base (rough spread estimate ≈ ${fmtAlt(baseM, altUnit)}).${invNote}`,
         unreliable,
       };
     }

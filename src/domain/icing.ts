@@ -3,6 +3,7 @@
 
 import type { Metar, Severity, VerticalProfile } from './types';
 import { rhFromDewPoint } from './humidity';
+import { fmtAlt, type AltUnit } from './units';
 import { maxSeverity } from './severity';
 import { hasFog, hasMist, hasPrecip, hasSnow, hasFreezingFog, hasFreezingPrecip } from './metar';
 
@@ -79,30 +80,30 @@ function worstRange(levels: IcingLevel[], worst: Severity): { lo: number; hi: nu
 }
 
 /** Evaluate icing risk across the vertical profile. */
-export function icingBand(profile: VerticalProfile, metar: Metar): IcingBand {
+export function icingBand(profile: VerticalProfile, metar: Metar, altUnit: AltUnit = 'm'): IcingBand {
   const ctx = buildContext(metar);
   const levels: IcingLevel[] = profile.levels.map((l) => {
     const moist = l.rhPct != null ? l.rhPct >= 85 : ctx.surfaceMoist;
     return { altM: l.altM, tempC: l.tempC, severity: icingAtLevel(l.tempC, moist, ctx) };
   });
   const worst = maxSeverity(levels.map((l) => l.severity));
-  return { levels, worst, reason: buildReason(levels, worst, ctx) };
+  return { levels, worst, reason: buildReason(levels, worst, ctx, altUnit) };
 }
 
-function buildReason(levels: IcingLevel[], worst: Severity, ctx: IcingContext): string {
+function buildReason(levels: IcingLevel[], worst: Severity, ctx: IcingContext, altUnit: AltUnit): string {
   const range = worstRange(levels, worst);
   const top = levels.length ? levels[levels.length - 1].altM : 0;
 
   if (worst === 'GOOD') {
-    return `Low icing risk across 0–${top} m AGL (temperature/moisture not conducive).`;
+    return `Low icing risk across 0–${fmtAlt(top, altUnit)} AGL (temperature/moisture not conducive).`;
   }
 
   const where =
     range == null
       ? ''
       : range.lo === range.hi
-        ? ` at ${range.lo} m AGL`
-        : ` between ${range.lo} and ${range.hi} m AGL`;
+        ? ` at ${fmtAlt(range.lo, altUnit)} AGL`
+        : ` between ${fmtAlt(range.lo, altUnit)} and ${fmtAlt(range.hi, altUnit)} AGL`;
 
   let driver: string;
   if (ctx.freezing) driver = 'freezing fog/precipitation reported';

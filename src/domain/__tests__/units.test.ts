@@ -10,6 +10,10 @@ import {
   inhgToHpa,
   round,
   fmtWindSpeed,
+  fmtAlt,
+  fmtAltFt,
+  fmtAltBoth,
+  fmtAltBothFt,
 } from '../units';
 
 describe('fmtWindSpeed', () => {
@@ -17,6 +21,29 @@ describe('fmtWindSpeed', () => {
     expect(fmtWindSpeed(15, 'kt')).toBe('15 kt');
     expect(fmtWindSpeed(15, 'ms')).toBe('7.7 m/s');
     expect(fmtWindSpeed(15, 'kmh')).toBe('27.8 km/h');
+  });
+});
+
+describe('altitude formatters', () => {
+  it('fmtAlt formats a metres value in the chosen unit', () => {
+    expect(fmtAlt(1524, 'm')).toBe('1524 m');
+    expect(fmtAlt(1524, 'ft')).toBe('5000 ft');
+  });
+
+  it('fmtAltFt formats a feet value without m→ft round-trip drift', () => {
+    expect(fmtAltFt(5000, 'ft')).toBe('5000 ft');
+    expect(fmtAltFt(5000, 'm')).toBe('1524 m');
+    expect(fmtAltFt(800, 'ft')).toBe('800 ft'); // exact, not 801
+  });
+
+  it('fmtAltBoth shows the secondary unit in parentheses (metres input)', () => {
+    expect(fmtAltBoth(1524, 'm')).toBe('1524 m (5000 ft)');
+    expect(fmtAltBoth(1524, 'ft')).toBe('5000 ft (1524 m)');
+  });
+
+  it('fmtAltBothFt shows the secondary unit in parentheses (feet input)', () => {
+    expect(fmtAltBothFt(800, 'm')).toBe('244 m (800 ft)');
+    expect(fmtAltBothFt(800, 'ft')).toBe('800 ft (244 m)');
   });
 });
 
