@@ -5,7 +5,20 @@ import {
   estimatedCloudBaseM,
   resolveCloudBase,
 } from '../clouds';
-import type { Metar } from '../types';
+import type { Metar, ProfileLevel, VerticalProfile } from '../types';
+
+const modelProfile = (cloudByAlt: Record<number, number | null>): VerticalProfile => {
+  const levels: ProfileLevel[] = Object.entries(cloudByAlt).map(([altM, cloudPct]) => ({
+    altM: Number(altM),
+    tempC: 15,
+    dewpC: null,
+    rhPct: null,
+    cloudPct,
+    source: 'model',
+  }));
+  levels.sort((a, b) => a.altM - b.altM);
+  return { levels, source: 'model', note: '' };
+};
 
 function metar(partial: Partial<Metar>): Metar {
   return {
@@ -77,10 +90,29 @@ describe('resolveCloudBase priority', () => {
     expect(r.baseFt).toBe(5000);
   });
 
-  it('3. estimates from spread when no layers and no CAVOK', () => {
+  it('3. uses the model cloud profile (lowest level with significant cloud) before estimating', () => {
+    const profile = modelProfile({ 0: 0, 450: 10, 690: 70, 930: 90 });
+    const r = resolveCloudBase(metar({ tempC: 23, dewpC: 7 }), profile);
+    expect(r.kind).toBe('model');
+    expect(r.baseM).toBe(690); // first level ≥ 50% cloud
+  });
+
+  it('skips the model tier when no level has significant cloud', () => {
+    const profile = modelProfile({ 0: 0, 450: 10, 690: 20 });
+    const r = resolveCloudBase(metar({ tempC: 23, dewpC: 7 }), profile);
+    expect(r.kind).toBe('estimate');
+  });
+
+  it('4. estimates from spread when no layers, no CAVOK, no model cloud', () => {
     const r = resolveCloudBase(metar({ tempC: 23, dewpC: 7 }));
     expect(r.kind).toBe('estimate');
     expect(r.baseM).toBe(2000);
+  });
+
+  it('actual layers still win over a model profile', () => {
+    const profile = modelProfile({ 0: 0, 690: 90 });
+    const r = resolveCloudBase(metar({ clouds: [makeCloudLayer('BKN', 1200)] }), profile);
+    expect(r.kind).toBe('actual');
   });
 
   it('reports none when nothing is available', () => {

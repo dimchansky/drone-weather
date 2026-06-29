@@ -1,11 +1,14 @@
 // Cloud layer / ceiling / cloud-base logic. See docs/spec.md §4.5 and
 // docs/initial-idea.md §7.5.
 
-import type { CloudCover, CloudLayer, Metar } from './types';
+import type { CloudCover, CloudLayer, Metar, VerticalProfile } from './types';
 import { ftToM, mToFt } from './units';
 
 /** Covers that constitute a ceiling (broken/overcast or sky obscured). */
 const CEILING_COVERS = new Set<CloudCover>(['BKN', 'OVC', 'VV']);
+
+/** Model cloud-cover (%) at a pressure level that counts as a significant cloud base. */
+const SIGNIFICANT_CLOUD_PCT = 50;
 
 /** Oktas (eighths of sky) for each cover, for display/interpretation. */
 export const COVER_OKTAS: Record<string, string> = {
@@ -44,7 +47,7 @@ export function estimatedCloudBaseM(tempC: number, dewpC: number): number {
   return Math.max(0, 125 * (tempC - dewpC));
 }
 
-export type CloudBaseKind = 'actual' | 'cavok' | 'estimate' | 'none';
+export type CloudBaseKind = 'actual' | 'cavok' | 'model' | 'estimate' | 'none';
 
 export interface ResolvedCloudBase {
   kind: CloudBaseKind;
@@ -54,12 +57,13 @@ export interface ResolvedCloudBase {
 }
 
 /**
- * Resolve the cloud base to display, by priority:
+ * Resolve the cloud base to display, by source priority:
  *   1. actual METAR cloud layers (lowest reported base),
  *   2. CAVOK (no significant cloud below 5000 ft AGL),
- *   3. estimate from dew point spread (clearly approximate).
+ *   3. model cloud profile (lowest pressure level with significant cloud — coarse),
+ *   4. estimate from dew point spread (clearly approximate).
  */
-export function resolveCloudBase(metar: Metar): ResolvedCloudBase {
+export function resolveCloudBase(metar: Metar, profile?: VerticalProfile): ResolvedCloudBase {
   const reported = metar.clouds.filter((l) => l.baseFt != null);
   if (reported.length) {
     const lowest = reported.reduce((a, b) =>
@@ -81,6 +85,22 @@ export function resolveCloudBase(metar: Metar): ResolvedCloudBase {
       baseM: Math.round(ftToM(5000)),
       note: 'CAVOK: no significant cloud below 5000 ft AGL',
     };
+  }
+
+  // Model tier: lowest pressure level reporting significant cloud cover. Coarse (model-level
+  // resolution), so it can't pinpoint a sub-500 m base — labelled accordingly.
+  if (profile?.source === 'model') {
+    const lev = profile.levels.find(
+      (l) => l.cloudPct != null && (l.cloudPct as number) >= SIGNIFICANT_CLOUD_PCT,
+    );
+    if (lev) {
+      return {
+        kind: 'model',
+        baseFt: Math.round(mToFt(lev.altM)),
+        baseM: Math.round(lev.altM),
+        note: `Model: ~${Math.round(lev.cloudPct as number)}% cloud near ${Math.round(lev.altM)} m AGL — coarse (model resolution)`,
+      };
+    }
   }
 
   if (metar.tempC != null && metar.dewpC != null) {

@@ -52,7 +52,7 @@ export function assembleBrief(input: AssembleInput): Brief {
       : lapseProfile(input.metar.tempC ?? 15);
 
   const icing = icingBand(profile, input.metar);
-  const cloudBase = resolveCloudBase(input.metar);
+  const cloudBase = resolveCloudBase(input.metar, profile);
   const risk = assessRisk({
     metar: input.metar,
     icingWorst: icing.worst,

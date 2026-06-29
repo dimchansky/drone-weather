@@ -8,6 +8,7 @@ import styles from './CloudsCard.module.css';
 const SOURCE_TAG: Record<string, string> = {
   actual: 'reported',
   cavok: 'CAVOK',
+  model: 'model',
   estimate: 'estimated',
   none: '—',
 };
