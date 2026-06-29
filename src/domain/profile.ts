@@ -6,7 +6,7 @@
 import type { ProfileLevel, VerticalProfile } from './types';
 
 /** Altitudes (m AGL) the analyzer focuses on; low band first. */
-export const DEFAULT_ALTS_M = [0, 30, 50, 100, 120, 150, 300, 500, 1000];
+export const DEFAULT_ALTS_M = [0, 30, 50, 100, 120, 150, 300, 500, 750, 1000];
 
 /** Standard environmental lapse rate: 6.5 °C per 1000 m. */
 export const LAPSE_C_PER_M = 0.0065;

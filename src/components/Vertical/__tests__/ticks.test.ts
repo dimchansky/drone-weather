@@ -6,8 +6,8 @@ describe('altitudeTicks', () => {
     expect(altitudeTicks(150)).toEqual([0, 30, 50, 100, 150]);
   });
 
-  it('uses sparse major labels on the 0–1000 m view', () => {
-    expect(altitudeTicks(1000)).toEqual([0, 100, 300, 500, 1000]);
+  it('uses sparse major labels on the 0–1000 m view (incl. 750 m to break the gap)', () => {
+    expect(altitudeTicks(1000)).toEqual([0, 100, 300, 500, 750, 1000]);
   });
 
   it('filters ticks above the range', () => {

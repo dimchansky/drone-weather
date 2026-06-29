@@ -76,6 +76,9 @@ export function VerticalAnalyzer({ brief }: { brief: Brief }) {
           const y = yFor(altM);
           return (
             <g key={altM}>
+              {altM > 0 && altM < maxAlt && (
+                <line x1={COL_L} y1={y} x2={COL_R} y2={y} className={styles.grid} />
+              )}
               <line x1={COL_L - 4} y1={y} x2={COL_L} y2={y} className={styles.tick} />
               <text x={COL_L - 8} y={y} className={styles.axisLabel} textAnchor="end" dominantBaseline="central">
                 {fmtAlt(altM, altUnit)}

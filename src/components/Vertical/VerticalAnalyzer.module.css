@@ -23,6 +23,12 @@
   stroke-width: 1.5;
 }
 
+.grid {
+  stroke: var(--text-dim);
+  stroke-width: 0.5;
+  opacity: 0.3;
+}
+
 .axisLabel {
   fill: var(--text-dim);
   font-size: 11px;
