@@ -3,6 +3,7 @@ import styles from './App.module.css';
 import { useBriefLoader } from './hooks/useBriefLoader';
 import { useNow } from './hooks/useNow';
 import { assessRisk } from './domain/risk';
+import { icingBand } from './domain/icing';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
@@ -27,27 +28,28 @@ export function App() {
   // Tick the clock so age/freshness stay live while the app is open.
   const now = useNow(30000);
   const windUnit = useSettingsStore((s) => s.windUnit);
-  // Recompute risk (a pure, no-network op) when the brief, clock, or wind unit changes so
-  // wind/gust values render in the selected unit without re-fetching weather.
-  const liveRisk = useMemo(
-    () =>
-      brief
-        ? assessRisk({
-            metar: brief.metar,
-            icingWorst: brief.icing.worst,
-            icingReason: brief.icing.reason,
-            distanceKm: brief.station?.distanceKm ?? null,
-            opsCeilingM: brief.opsCeilingM,
-            model: brief.model,
-            cloudBaseM: brief.cloudBase.baseM,
-            profile: brief.profile,
-            source: brief.source,
-            windUnit,
-            now,
-          })
-        : null,
-    [brief, now, windUnit],
-  );
+  const altUnit = useSettingsStore((s) => s.altUnit);
+  // Recompute risk (a pure, no-network op) when the brief, clock, or unit prefs change so wind &
+  // altitude values render in the selected units without re-fetching weather. The icing reason
+  // carries altitudes, so it is re-derived here too (icingBand is pure; the bands are unchanged).
+  const liveRisk = useMemo(() => {
+    if (!brief) return null;
+    const icing = icingBand(brief.profile, brief.metar, altUnit);
+    return assessRisk({
+      metar: brief.metar,
+      icingWorst: icing.worst,
+      icingReason: icing.reason,
+      distanceKm: brief.station?.distanceKm ?? null,
+      opsCeilingM: brief.opsCeilingM,
+      model: brief.model,
+      cloudBaseM: brief.cloudBase.baseM,
+      profile: brief.profile,
+      source: brief.source,
+      windUnit,
+      altUnit,
+      now,
+    });
+  }, [brief, now, windUnit, altUnit]);
 
   return (
     <div className={styles.app}>

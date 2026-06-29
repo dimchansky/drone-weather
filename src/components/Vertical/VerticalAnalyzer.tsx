@@ -60,7 +60,7 @@ export function VerticalAnalyzer({ brief }: { brief: Brief }) {
       title="Vertical hazard analyzer"
       right={
         <button className={styles.toggle} onClick={() => setFull((f) => !f)}>
-          {full ? '0–150 m' : '0–1000 m'}
+          {full ? `0–${fmtAlt(150, altUnit)}` : `0–${fmtAlt(1000, altUnit)}`}
         </button>
       }
     >
@@ -118,12 +118,12 @@ export function VerticalAnalyzer({ brief }: { brief: Brief }) {
 
       {inversion && (
         <p className={styles.inversion}>
-          Low-level temperature inversion: temperature rises to ~{round(inversion.topM)} m before
-          falling (model).
+          Low-level temperature inversion: temperature rises to ~{fmtAlt(inversion.topM, altUnit)}{' '}
+          before falling (model).
         </p>
       )}
       {!showBase && baseM != null && baseM > maxAlt && (
-        <p className={styles.note}>Cloud base (~{round(baseM)} m) is above the shown range.</p>
+        <p className={styles.note}>Cloud base (~{fmtAlt(baseM, altUnit)}) is above the shown range.</p>
       )}
       <p className={styles.note}>
         Colours show icing risk by altitude; temperatures on the right. {brief.profile.note}

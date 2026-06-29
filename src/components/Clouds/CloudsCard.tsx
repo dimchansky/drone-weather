@@ -1,7 +1,8 @@
 import { Card } from '../common/Card';
-import { ceilingFt, COVER_OKTAS, type ResolvedCloudBase } from '../../domain/clouds';
-import { fmtAltBoth } from '../../utils/format';
-import { ftToM, round } from '../../domain/units';
+import { resolveCloudBase, ceilingFt, COVER_OKTAS, type ResolvedCloudBase } from '../../domain/clouds';
+import { fmtAltFt, fmtAltBothFt } from '../../utils/format';
+import { useSettingsStore } from '../../store/settingsStore';
+import type { AltUnit } from '../../store/settingsStore';
 import type { Brief } from '../../domain/brief';
 import styles from './CloudsCard.module.css';
 
@@ -15,18 +16,18 @@ const SOURCE_TAG: Record<string, string> = {
 };
 
 /** Display the resolved cloud base honestly: precise only for observations; ≈/~ for fallbacks. */
-function renderCloudBase(cb: ResolvedCloudBase): string {
-  if (cb.baseM == null) return '—';
-  const m = round(cb.baseM);
+function renderCloudBase(cb: ResolvedCloudBase, altUnit: AltUnit): string {
+  if (cb.baseFt == null || cb.baseM == null) return cb.kind === 'none-low' ? 'clear / high base' : '—';
+  const primary = `${fmtAltFt(cb.baseFt, altUnit)} AGL`;
   switch (cb.kind) {
     case 'actual':
-      return `${m} m AGL`;
+      return primary;
     case 'cavok':
-      return `≥ ${m} m AGL`;
+      return `≥ ${primary}`;
     case 'model':
-      return `~${m} m AGL`;
+      return `~${primary}`;
     case 'estimate':
-      return `≈ ${m} m AGL`;
+      return `≈ ${primary}`;
     case 'none-low':
       return 'clear / high base';
     default:
@@ -35,12 +36,18 @@ function renderCloudBase(cb: ResolvedCloudBase): string {
 }
 
 export function CloudsCard({ brief }: { brief: Brief }) {
-  const { metar, cloudBase } = brief;
+  const { metar } = brief;
+  const altUnit = useSettingsStore((s) => s.altUnit);
+  // Recompute the resolved base so its note + value render in the selected altitude unit (the
+  // numeric base/kind are unit-independent and match brief.cloudBase used elsewhere).
+  const cloudBase = resolveCloudBase(metar, brief.profile, altUnit);
   const ceil = ceilingFt(metar.clouds);
 
   return (
     <Card title="Cloud & ceiling">
-      {metar.cavok && <p className={styles.cavok}>CAVOK — no significant cloud below 5000 ft AGL.</p>}
+      {metar.cavok && (
+        <p className={styles.cavok}>CAVOK — no significant cloud below {fmtAltFt(5000, altUnit)} AGL.</p>
+      )}
 
       {metar.clouds.length > 0 ? (
         <ul className={styles.layers}>
@@ -49,7 +56,7 @@ export function CloudsCard({ brief }: { brief: Brief }) {
               <span className={styles.cover}>{l.cover}</span>
               <span className={styles.base}>
                 {l.baseFt != null
-                  ? fmtAltBoth(ftToM(l.baseFt))
+                  ? fmtAltBothFt(l.baseFt, altUnit)
                   : l.cover === 'VV'
                     ? 'sky obscured'
                     : 'clear'}
@@ -68,11 +75,11 @@ export function CloudsCard({ brief }: { brief: Brief }) {
       <dl className={styles.summary}>
         <div>
           <dt>Ceiling</dt>
-          <dd>{ceil != null ? fmtAltBoth(ftToM(ceil)) : 'none below 1500 ft'}</dd>
+          <dd>{ceil != null ? fmtAltBothFt(ceil, altUnit) : `none below ${fmtAltFt(1500, altUnit)}`}</dd>
         </div>
         <div>
           <dt>Cloud base ({SOURCE_TAG[cloudBase.kind] ?? '—'})</dt>
-          <dd>{renderCloudBase(cloudBase)}</dd>
+          <dd>{renderCloudBase(cloudBase, altUnit)}</dd>
         </div>
       </dl>
       <p className={styles.note}>{cloudBase.note}</p>
