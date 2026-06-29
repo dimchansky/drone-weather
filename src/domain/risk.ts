@@ -6,13 +6,22 @@
 import type {
   Confidence,
   Metar,
+  ModelConditions,
   RiskComponent,
   RiskSummary,
   Severity,
 } from './types';
 import { ktToMs, mToFt, round } from './units';
 import { ceilingFt } from './clouds';
-import { hasFog, hasMist, hasFreezingFog } from './metar';
+import { rhFromDewPoint } from './humidity';
+import {
+  hasFog,
+  hasMist,
+  hasFreezingFog,
+  hasFreezingPrecip,
+  hasPrecip,
+  hasThunderstorm,
+} from './metar';
 import { bumpSeverity, maxSeverity, severityRank } from './severity';
 
 export const DEFAULT_OPS_CEILING_M = 120;
@@ -89,30 +98,96 @@ export function visibilityRisk(visibilityM: number | null): RiskComponent {
   };
 }
 
-export function moistureRisk(metar: Metar): RiskComponent {
-  if (hasFreezingFog(metar)) {
-    return { key: 'moisture', label: 'Moisture/fog', severity: 'NOFLY', reason: 'Freezing fog — severe moisture and icing hazard.' };
+export interface MoistureInputs {
+  model?: ModelConditions | null;
+  cloudBaseM?: number | null;
+  opsCeilingM?: number;
+  now?: Date;
+}
+
+const isNightOrMorning = (now: Date): boolean => {
+  const h = now.getHours();
+  return h >= 20 || h < 9;
+};
+
+/**
+ * Moisture & wetness exposure: will the drone fly into wet air (precip, fog, cloud
+ * immersion) or get wet from dew/condensation? Separate from icing (freezing-specific) —
+ * wetness is a hazard for non-waterproof drones even above freezing. Worst driver wins.
+ */
+export function moistureRisk(metar: Metar, opts: MoistureInputs = {}): RiskComponent {
+  const label = 'Moisture & wetness';
+  const opsCeilingM = opts.opsCeilingM ?? DEFAULT_OPS_CEILING_M;
+  const model = opts.model ?? null;
+  const now = opts.now ?? new Date();
+
+  const candidates: { severity: Severity; reason: string; value?: string }[] = [];
+
+  // Freezing / convective — most severe.
+  if (hasFreezingFog(metar) || hasFreezingPrecip(metar)) {
+    candidates.push({ severity: 'NOFLY', reason: 'Freezing fog/precipitation — wet airframe and severe icing hazard.', value: 'freezing' });
   }
-  const t = metar.tempC;
-  const td = metar.dewpC;
+  if (hasThunderstorm(metar)) {
+    candidates.push({ severity: 'NOFLY', reason: 'Thunderstorm in the area.', value: 'TS' });
+  }
+
+  // Precipitation (observed METAR, else model).
+  if (hasPrecip(metar)) {
+    candidates.push({ severity: 'HIGH', reason: 'Precipitation reported (METAR) — the drone will get wet.', value: 'precip' });
+  } else if (model?.precipMm != null && model.precipMm >= 0.1) {
+    candidates.push({ severity: 'HIGH', reason: `Model: ~${round(model.precipMm, 1)} mm/h precipitation expected.`, value: `${round(model.precipMm, 1)} mm` });
+  } else if (model?.precipProb != null && model.precipProb >= 60) {
+    candidates.push({ severity: 'CAUTION', reason: `Model: ${round(model.precipProb)}% chance of precipitation.`, value: `${round(model.precipProb)}%` });
+  }
+
+  // Fog / mist.
+  if (hasFog(metar)) {
+    candidates.push({ severity: 'HIGH', reason: 'Fog — flying in fog wets the airframe and optics.', value: 'fog' });
+  } else if (hasMist(metar)) {
+    candidates.push({ severity: 'CAUTION', reason: 'Mist (BR) — damp air near the surface.', value: 'mist' });
+  }
+
+  // Cloud immersion — resolved cloud base within / just above the ops band.
+  const baseM = opts.cloudBaseM;
+  if (baseM != null && baseM <= opsCeilingM) {
+    candidates.push({ severity: 'HIGH', reason: `Cloud base ~${round(baseM)} m is within your ${round(opsCeilingM)} m ops band — you would fly into cloud.`, value: `base ${round(baseM)} m` });
+  } else if (baseM != null && baseM <= opsCeilingM + 150) {
+    candidates.push({ severity: 'CAUTION', reason: `Cloud base ~${round(baseM)} m is just above your ops band.`, value: `base ${round(baseM)} m` });
+  }
+
+  // Near-saturation / dew / condensation.
+  const t = metar.tempC ?? model?.tempC2m ?? null;
+  const td = metar.dewpC ?? model?.dewp2m ?? null;
   const spread = t != null && td != null ? t - td : null;
+  const rh = t != null && td != null ? rhFromDewPoint(t, td) : (model?.rh2m ?? null);
+  const windKt = metar.wind.calm ? 0 : metar.wind.speedKt || model?.windKt || 0;
+  const nearSat = (rh != null && rh >= 97) || (spread != null && spread <= 1);
+  if (nearSat) {
+    const lowWind = windKt < 6;
+    const clearSky = model?.cloudCoverPct != null && model.cloudCoverPct < 40;
+    const rhTxt = rh != null ? `RH ~${round(rh)}%` : 'air near saturation';
+    if (lowWind && clearSky && isNightOrMorning(now)) {
+      candidates.push({ severity: 'HIGH', reason: `Clear, calm, ${now.getHours() < 12 ? 'early morning' : 'overnight'} with ${rhTxt} — dew likely on the airframe.`, value: 'dew' });
+    } else if (lowWind) {
+      candidates.push({ severity: 'HIGH', reason: `${rhTxt} in calm air — condensation/dew likely.`, value: 'condensation' });
+    } else {
+      candidates.push({ severity: 'CAUTION', reason: `${rhTxt} — condensation possible (wind keeps it lower).`, value: 'near-sat' });
+    }
+  }
 
-  let severity: Severity = 'GOOD';
-  if (hasFog(metar)) severity = 'HIGH';
-  else if (spread != null) severity = spread < 2 ? 'HIGH' : spread <= 5 ? 'CAUTION' : 'GOOD';
-  if (hasMist(metar)) severity = maxSeverity([severity, 'CAUTION']);
+  if (candidates.length === 0) {
+    return {
+      key: 'moisture',
+      label,
+      severity: 'GOOD',
+      value: spread != null ? `${round(spread)} °C spread` : undefined,
+      reason: spread != null ? `Dry air (dew point spread ${round(spread)} °C) — low wetness risk.` : 'Low wetness risk.',
+    };
+  }
 
-  const reason =
-    spread != null
-      ? `Dew point spread ${round(spread)} °C${hasFog(metar) ? ', fog present' : hasMist(metar) ? ', mist present' : ''} — ${spread < 2 || hasFog(metar) ? 'air near saturation, fog/condensation risk' : 'relatively dry'}.`
-      : 'Dew point not reported.';
-  return {
-    key: 'moisture',
-    label: 'Moisture/fog',
-    severity,
-    value: spread != null ? `${round(spread)} °C spread` : undefined,
-    reason,
-  };
+  const worst = maxSeverity(candidates.map((c) => c.severity));
+  const driver = candidates.find((c) => c.severity === worst)!; // earliest = highest priority
+  return { key: 'moisture', label, severity: worst, value: driver.value, reason: driver.reason };
 }
 
 export function ceilingRisk(metar: Metar, opsCeilingM = DEFAULT_OPS_CEILING_M): RiskComponent {
@@ -174,7 +249,11 @@ export interface RiskInputs {
   icingReason: string;
   distanceKm: number | null;
   opsCeilingM?: number;
-  /** Reference time for freshness; defaults to the real current time. */
+  /** Surface model conditions for the moisture/wetness component. */
+  model?: ModelConditions | null;
+  /** Resolved cloud base (m AGL) for cloud-immersion detection. */
+  cloudBaseM?: number | null;
+  /** Reference time for freshness + the dew time-of-day amplifier; defaults to now. */
   now?: Date;
 }
 
@@ -186,7 +265,7 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
     windRisk(metar.wind.speedKt, metar.wind.dirDeg),
     gustRisk(metar.wind.speedKt, metar.wind.gustKt),
     visibilityRisk(metar.visibilityM),
-    moistureRisk(metar),
+    moistureRisk(metar, { model: inputs.model, cloudBaseM: inputs.cloudBaseM, opsCeilingM, now }),
     ceilingRisk(metar, opsCeilingM),
     icingRiskComponent(icingWorst, icingReason),
   ];

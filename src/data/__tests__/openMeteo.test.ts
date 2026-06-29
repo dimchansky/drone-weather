@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseProfile, getProfile, getSurfaceFallback } from '../openMeteo';
+import { parseProfile, getProfile, getSurfaceFallback, parseModelConditions } from '../openMeteo';
 import fixture from './fixtures/openmeteo-profile.json';
 
 const NOON = new Date('2026-06-28T12:00:00Z'); // matches fixture time[12]
@@ -49,5 +49,38 @@ describe('getProfile / getSurfaceFallback', () => {
     expect(s.rhPct).toBe(84);
     expect(s.windKt).not.toBeNull();
     expect(s.observedAt.toISOString()).toBe('2026-06-28T12:00:00.000Z');
+  });
+});
+
+describe('parseModelConditions', () => {
+  it('extracts surface model conditions at the nearest hour', () => {
+    const data = {
+      elevation: 100,
+      hourly: {
+        time: ['2026-06-28T11:00', '2026-06-28T12:00'],
+        temperature_2m: [14, 15],
+        dew_point_2m: [13, 14],
+        relative_humidity_2m: [90, 94],
+        wind_speed_10m: [3, 2],
+        precipitation: [0, 0.4],
+        precipitation_probability: [20, 80],
+        cloud_cover: [10, 90],
+        cloud_cover_low: [5, 80],
+      },
+    };
+    expect(parseModelConditions(data, NOON)).toEqual({
+      tempC2m: 15,
+      dewp2m: 14,
+      rh2m: 94,
+      windKt: 2,
+      precipMm: 0.4,
+      precipProb: 80,
+      cloudCoverPct: 90,
+      cloudCoverLowPct: 80,
+    });
+  });
+
+  it('returns all-null for empty/undefined data', () => {
+    expect(parseModelConditions(undefined, NOON).precipMm).toBeNull();
   });
 });

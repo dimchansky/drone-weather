@@ -34,6 +34,8 @@ export function App() {
             icingReason: brief.icing.reason,
             distanceKm: brief.station?.distanceKm ?? null,
             opsCeilingM: brief.opsCeilingM,
+            model: brief.model,
+            cloudBaseM: brief.cloudBase.baseM,
             now,
           })
         : null,

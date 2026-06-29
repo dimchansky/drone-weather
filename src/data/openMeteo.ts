@@ -2,7 +2,7 @@
 // profile from pressure-level data, plus a surface fallback when no METAR is nearby.
 // See docs/spec.md §6.3.
 
-import type { Coord, ProfileLevel } from '../domain/types';
+import type { Coord, ModelConditions, ProfileLevel } from '../domain/types';
 import { dewPointFromRH } from '../domain/humidity';
 import { cachedFetchJson } from './cache';
 
@@ -14,8 +14,13 @@ const LEVELS = [1000, 950, 925, 900, 850] as const;
 const SURFACE_VARS = [
   'temperature_2m',
   'relative_humidity_2m',
+  'dew_point_2m',
   'wind_speed_10m',
   'wind_direction_10m',
+  'precipitation',
+  'precipitation_probability',
+  'cloud_cover',
+  'cloud_cover_low',
 ];
 
 function hourlyVars(): string {
@@ -169,4 +174,43 @@ export async function getSurfaceFallback(
     windDirDeg: val('wind_direction_10m'),
     windKt: val('wind_speed_10m'),
   };
+}
+
+const EMPTY_CONDITIONS: ModelConditions = {
+  tempC2m: null,
+  dewp2m: null,
+  rh2m: null,
+  windKt: null,
+  precipMm: null,
+  precipProb: null,
+  cloudCoverPct: null,
+  cloudCoverLowPct: null,
+};
+
+/** Parse surface model conditions (precip, cloud, dew) for the moisture/wetness risk. */
+export function parseModelConditions(data: OpenMeteoResponse | undefined, now: Date): ModelConditions {
+  const times = timesOf(data);
+  if (!times || !data?.hourly) return EMPTY_CONDITIONS;
+  const val = reader(data.hourly, nearestHourIndex(times, now));
+  return {
+    tempC2m: val('temperature_2m'),
+    dewp2m: val('dew_point_2m'),
+    rh2m: val('relative_humidity_2m'),
+    windKt: val('wind_speed_10m'),
+    precipMm: val('precipitation'),
+    precipProb: val('precipitation_probability'),
+    cloudCoverPct: val('cloud_cover'),
+    cloudCoverLowPct: val('cloud_cover_low'),
+  };
+}
+
+/** Fetch surface model conditions (reuses the same cached request as getProfile). */
+export async function getModelConditions(
+  coord: Coord,
+  deps: OpenMeteoDeps = {},
+): Promise<ModelConditions> {
+  const fj = fetcher(deps);
+  const now = deps.now ?? new Date();
+  const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
+  return parseModelConditions(data, now);
 }

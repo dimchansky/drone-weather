@@ -88,6 +88,18 @@ export interface VerticalProfile {
   note: string;
 }
 
+/** Surface-level model (Open-Meteo) conditions used for moisture/wetness risk. */
+export interface ModelConditions {
+  tempC2m: number | null;
+  dewp2m: number | null;
+  rh2m: number | null;
+  windKt: number | null;
+  precipMm: number | null;
+  precipProb: number | null; // %
+  cloudCoverPct: number | null; // total cloud cover %
+  cloudCoverLowPct: number | null; // low cloud cover %
+}
+
 // ----- risk -----
 export type Severity = 'GOOD' | 'CAUTION' | 'HIGH' | 'NOFLY';
 export type Confidence = 'OK' | 'REDUCED' | 'LOW';

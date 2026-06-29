@@ -42,15 +42,54 @@ describe('visibilityRisk', () => {
   });
 });
 
-describe('moistureRisk', () => {
-  it('is GOOD for a large spread', () => {
+describe('moistureRisk (moisture & wetness)', () => {
+  const NIGHT = new Date('2026-06-28T03:00:00Z'); // device-local hour used by the dew amplifier
+
+  it('is GOOD for dry air (large spread)', () => {
     expect(moistureRisk(m('LFPG 281200Z 27005KT CAVOK 23/07 Q1015')).severity).toBe('GOOD');
   });
-  it('is HIGH for a tiny spread', () => {
-    expect(moistureRisk(m('EHAM 281200Z 21008KT 6000 09/09 Q1011')).severity).toBe('HIGH');
+
+  it('is CAUTION for near-saturation in a breeze', () => {
+    // RH ~100% but 8 kt wind keeps condensation lower
+    expect(moistureRisk(m('EHAM 281200Z 21008KT 6000 09/09 Q1011')).severity).toBe('CAUTION');
   });
+
+  it('is HIGH for precipitation', () => {
+    expect(moistureRisk(m('EGLL 281200Z 24010KT 6000 -RA BKN015 12/11 Q1008')).severity).toBe('HIGH');
+  });
+
+  it('is HIGH for fog', () => {
+    expect(moistureRisk(m('EGLL 281200Z 02003KT 0400 FG 08/08 Q1012')).severity).toBe('HIGH');
+  });
+
   it('is NO-FLY for freezing fog', () => {
     expect(moistureRisk(m('BIKF 281200Z 03010KT 0300 FZFG M02/M03 Q0995')).severity).toBe('NOFLY');
+  });
+
+  it('flags cloud immersion when the resolved base is within the ops band', () => {
+    const r = moistureRisk(m('EGLL 281200Z 27006KT 9999 SCT004 12/11 Q1010'), {
+      cloudBaseM: 90,
+      opsCeilingM: 120,
+    });
+    expect(r.severity).toBe('HIGH');
+    expect(r.reason).toMatch(/into cloud/i);
+  });
+
+  it('flags morning dew: near-saturation + calm + clear sky + early morning', () => {
+    const r = moistureRisk(m('EFHK 281200Z 00000KT 9999 14/14 Q1018'), {
+      model: { tempC2m: 14, dewp2m: 14, rh2m: 100, windKt: 1, precipMm: 0, precipProb: 0, cloudCoverPct: 5, cloudCoverLowPct: 0 },
+      now: NIGHT,
+    });
+    expect(r.severity).toBe('HIGH');
+    expect(r.reason).toMatch(/dew/i);
+  });
+
+  it('uses model precipitation probability when METAR has no precip', () => {
+    const r = moistureRisk(m('LFPG 281200Z 27006KT CAVOK 18/06 Q1015'), {
+      model: { tempC2m: 18, dewp2m: 6, rh2m: 46, windKt: 6, precipMm: 0, precipProb: 70, cloudCoverPct: 60, cloudCoverLowPct: 30 },
+    });
+    expect(r.severity).toBe('CAUTION');
+    expect(r.reason).toMatch(/70%/);
   });
 });
 

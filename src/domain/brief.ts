@@ -1,7 +1,7 @@
 // Brief assembler — pure composition of the domain pieces into the object the UI renders.
 // The async fetching lives in the store; this stays pure and testable. See docs/spec.md §7.
 
-import type { Coord, Metar, ProfileLevel, RiskSummary, Taf, VerticalProfile } from './types';
+import type { Coord, Metar, ModelConditions, ProfileLevel, RiskSummary, Taf, VerticalProfile } from './types';
 import { mergeModelProfile, lapseProfile } from './profile';
 import { icingBand, type IcingBand } from './icing';
 import { resolveCloudBase, type ResolvedCloudBase } from './clouds';
@@ -25,6 +25,7 @@ export interface Brief {
   icing: IcingBand;
   cloudBase: ResolvedCloudBase;
   risk: RiskSummary;
+  model: ModelConditions | null; // kept so risk can be recomputed live (freshness + dew)
   opsCeilingM: number; // kept so the risk can be recomputed live (freshness)
   fetchedAt: Date;
 }
@@ -35,6 +36,7 @@ export interface AssembleInput {
   metar: Metar;
   taf?: Taf | null;
   modelLevels: ProfileLevel[];
+  model?: ModelConditions | null;
   station?: StationRef | null;
   distanceKm?: number | null;
   opsCeilingM?: number;
@@ -53,12 +55,15 @@ export function assembleBrief(input: AssembleInput): Brief {
 
   const icing = icingBand(profile, input.metar);
   const cloudBase = resolveCloudBase(input.metar, profile);
+  const model = input.model ?? null;
   const risk = assessRisk({
     metar: input.metar,
     icingWorst: icing.worst,
     icingReason: icing.reason,
     distanceKm: input.distanceKm ?? input.station?.distanceKm ?? null,
     opsCeilingM,
+    model,
+    cloudBaseM: cloudBase.baseM,
     now,
   });
 
@@ -72,6 +77,7 @@ export function assembleBrief(input: AssembleInput): Brief {
     icing,
     cloudBase,
     risk,
+    model,
     opsCeilingM,
     fetchedAt: now,
   };
