@@ -36,3 +36,37 @@ export function parseLongitudeInput(value: string): number | null {
   const n = parseCoordinateInput(value);
   return n != null && n >= -180 && n <= 180 ? n : null;
 }
+
+// Candidate lat/lon separators, tried in priority order. A dot-decimal string lets the
+// comma act as the separator; a comma-decimal string is only unambiguous when the
+// separator is a comma+space, a space, or a semicolon. All-comma, no-space strings
+// (e.g. "54,6651,25,2169") are ambiguous and rejected.
+const PAIR_SEPARATORS: RegExp[] = [/\s*;\s*/, /,\s+/, /\s+/, /,/];
+
+/**
+ * Parse a pasted "latitude, longitude" pair (Google Maps style) into numbers, or `null`.
+ * Latitude comes first. Accepts dot or comma decimals where unambiguous, extra spaces,
+ * and surrounding parentheses/brackets/degree signs. Rejects ambiguous or malformed input.
+ *   "54.66511, 25.21670" · "54.66511 25.21670" · "54,66511, 25,21670" · "(54.6, 25.2)"
+ */
+export function parseCoordinatePair(value: string): { lat: number; lon: number } | null {
+  if (typeof value !== 'string') return null;
+  const cleaned = value
+    .trim()
+    .replace(/^[([]+|[)\]]+$/g, '')
+    .replace(/°/g, '')
+    .trim();
+  if (cleaned === '') return null;
+
+  for (const sep of PAIR_SEPARATORS) {
+    const parts = cleaned
+      .split(sep)
+      .map((p) => p.trim())
+      .filter((p) => p !== '');
+    if (parts.length !== 2) continue;
+    const lat = parseLatitudeInput(parts[0]);
+    const lon = parseLongitudeInput(parts[1]);
+    if (lat != null && lon != null) return { lat, lon };
+  }
+  return null;
+}
