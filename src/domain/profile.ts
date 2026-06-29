@@ -16,7 +16,29 @@ const LAPSE_NOTE =
   'A model, not a measured sounding. Moisture aloft is not extrapolated.';
 
 const MODEL_NOTE =
-  'Vertical profile from a forecast model (Open-Meteo), interpolated to standard altitudes.';
+  'Vertical profile from a forecast model (Open-Meteo), interpolated to standard altitudes. ' +
+  'The 0 m point is the model surface and can differ slightly from the station METAR temperature.';
+
+/** Minimum surface-to-aloft warming (°C) to call it an inversion. */
+const INVERSION_MIN_DELTA_C = 0.5;
+
+/**
+ * Detect a low-level temperature inversion: a level above the surface that is warmer than the
+ * surface by at least `INVERSION_MIN_DELTA_C`. Returns the warmest level's altitude and the
+ * warming amount, or null. (Lapse profiles are monotonic, so this only fires for model data.)
+ */
+export function detectInversion(
+  levels: { altM: number; tempC: number }[],
+): { topM: number; deltaC: number } | null {
+  if (levels.length < 2) return null;
+  const surface = levels.reduce((a, b) => (a.altM <= b.altM ? a : b));
+  const warmest = levels.reduce((a, b) => (b.tempC > a.tempC ? b : a));
+  const deltaC = warmest.tempC - surface.tempC;
+  if (warmest.altM > surface.altM && deltaC >= INVERSION_MIN_DELTA_C) {
+    return { topM: warmest.altM, deltaC };
+  }
+  return null;
+}
 
 /** Build a lapse-rate profile from the surface temperature. */
 export function lapseProfile(

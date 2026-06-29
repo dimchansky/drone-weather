@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lapseProfile, mergeModelProfile, DEFAULT_ALTS_M } from '../profile';
+import { lapseProfile, mergeModelProfile, detectInversion, DEFAULT_ALTS_M } from '../profile';
 import type { ProfileLevel } from '../types';
 
 describe('lapseProfile', () => {
@@ -52,5 +52,38 @@ describe('mergeModelProfile', () => {
     const p = mergeModelProfile(model, [50]);
     expect(p.levels[0].dewpC).toBeCloseTo(14.5, 4);
     expect(p.levels[0].rhPct).toBeCloseTo(73, 4);
+  });
+});
+
+describe('detectInversion', () => {
+  // Real Open-Meteo low-level inversion (Vilnius, 04:00Z): AGL (m) -> temp (°C).
+  const inversionModel: ProfileLevel[] = [
+    { altM: 0, tempC: 25.6, dewpC: null, rhPct: null, source: 'model' },
+    { altM: 2, tempC: 25.7, dewpC: null, rhPct: null, source: 'model' },
+    { altM: 454, tempC: 27.2, dewpC: null, rhPct: null, source: 'model' },
+    { altM: 688, tempC: 25.5, dewpC: null, rhPct: null, source: 'model' },
+    { altM: 930, tempC: 23.6, dewpC: null, rhPct: null, source: 'model' },
+    { altM: 1423, tempC: 19.2, dewpC: null, rhPct: null, source: 'model' },
+  ];
+
+  it('detects the real inversion after interpolation to the standard grid', () => {
+    const p = mergeModelProfile(inversionModel);
+    const inv = detectInversion(p.levels);
+    expect(inv).not.toBeNull();
+    expect(inv!.topM).toBe(500); // warmest interpolated standard altitude
+    expect(inv!.deltaC).toBeGreaterThan(0.5);
+  });
+
+  it('returns null for a normal lapse (monotonic-decreasing) profile', () => {
+    expect(detectInversion(lapseProfile(23).levels)).toBeNull();
+  });
+
+  it('ignores sub-threshold noise (<0.5 °C warming)', () => {
+    expect(
+      detectInversion([
+        { altM: 0, tempC: 20 },
+        { altM: 500, tempC: 20.3 },
+      ]),
+    ).toBeNull();
   });
 });
