@@ -1,6 +1,8 @@
 # Cloud-base & wet-layer research
 
-Status: **research note + implementation proposal** — no production logic changed yet.
+Status: **implemented** (2026-06-29) — the §8 proposal landed in commits `7c8cb2b` (gating +
+sky-clear + inversion note), `c0b40b3` (model elevated near-saturation caution), `772c000`
+(975 hPa), `7a58287` (honest UI labels). This note is kept as the rationale of record.
 Date: 2026-06-29. Author of evidence: `research/cloud-base/` (reproducible harness + fixtures).
 
 The current fallback cloud-base estimate is Espy's law:
@@ -303,9 +305,11 @@ and gated as above. It is never used to *lower* a wetness assessment.
 
 ---
 
-## 8. Implementation plan (proposal — do **not** start until approved)
+## 8. Implementation plan (✅ implemented — see the status note at the top)
 
 Small, surgical changes; the architecture and priority order stay. Domain stays pure & tested.
+One addition beyond the original plan: explicit sky-clear codes (SKC/CLR/NSC/NCD) are now treated
+as an observation of no significant low cloud, winning over the model/estimate.
 
 ### 8.1 Domain logic
 - **`src/domain/clouds.ts`** — promote the candidate estimators from `research/cloud-base/methods.ts`
