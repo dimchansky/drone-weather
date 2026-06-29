@@ -8,6 +8,7 @@ import {
   hasFog,
   hasMist,
 } from '../metar';
+import { ceilingFt, resolveCloudBase } from '../clouds';
 
 const NOW = new Date('2026-06-28T13:10:00Z');
 const parse = (raw: string) => parseMetar(raw, { now: NOW });
@@ -76,6 +77,43 @@ describe('parseMetar — core fields', () => {
     const m = parse('KSFO 281256Z 09006KT 1/2SM FG OVC002 14/13 A3001');
     expect(m.visibilityM).toBe(Math.round(0.5 * 1609.344)); // 805 m
     expect(hasFog(m)).toBe(true);
+  });
+});
+
+describe('parseMetar — automated `///` cloud-type marker', () => {
+  // Automated stations append `///` when the cloud type can't be determined,
+  // e.g. `EKCH 290920Z AUTO 27012KT 9999 FEW024/// BKN120/// 22/16 Q1022`.
+  // The base height must still be captured; CB/TCU stay false (type unavailable).
+  const cases: Array<{ tok: string; cover: string; baseFt: number | null; baseM: number | null }> = [
+    { tok: 'FEW024///', cover: 'FEW', baseFt: 2400, baseM: 732 },
+    { tok: 'BKN120///', cover: 'BKN', baseFt: 12000, baseM: 3658 },
+    { tok: 'OVC///', cover: 'OVC', baseFt: null, baseM: null }, // base unknown (pre-existing handling)
+  ];
+
+  for (const c of cases) {
+    it(`captures ${c.tok} as ${c.cover} base ${c.baseFt ?? 'null'} ft`, () => {
+      const m = parse(`EKCH 290920Z AUTO 27012KT 9999 ${c.tok} 22/16 Q1022`);
+      expect(m.clouds).toEqual([
+        expect.objectContaining({ cover: c.cover, baseFt: c.baseFt, baseM: c.baseM, cb: false, tcu: false }),
+      ]);
+    });
+  }
+
+  it('keeps both layers of a real AUTO report and treats BKN120 as the ceiling', () => {
+    const m = parse('EKCH 290920Z AUTO 27012KT 9999 FEW024/// BKN120/// 22/16 Q1022');
+    expect(m.clouds.map((c) => ({ cover: c.cover, baseFt: c.baseFt }))).toEqual([
+      { cover: 'FEW', baseFt: 2400 },
+      { cover: 'BKN', baseFt: 12000 },
+    ]);
+    expect(ceilingFt(m.clouds)).toBe(12000);
+  });
+
+  it('resolveCloudBase uses the observed layer (kind "actual") instead of a spread estimate', () => {
+    const m = parse('EKCH 290920Z AUTO 27012KT 9999 FEW024/// BKN120/// 22/16 Q1022');
+    const r = resolveCloudBase(m);
+    expect(r.kind).toBe('actual');
+    expect(r.baseFt).toBe(2400);
+    expect(r.note).toContain('FEW024');
   });
 });
 

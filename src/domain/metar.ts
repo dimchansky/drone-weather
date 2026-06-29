@@ -34,7 +34,9 @@ const VIS_M_RE = /^(\d{4})(?:NDV)?$/;
 const VIS_SM_RE = /^(M|P)?(\d{1,2})(?:\/(\d{1,2}))?SM$/;
 const FRACTION_SM_RE = /^(\d{1,2})\/(\d{1,2})SM$/;
 const RVR_RE = /^R\d{2}[LCR]?\//;
-const CLOUD_RE = /^(FEW|SCT|BKN|OVC|VV)(\d{3}|\/{3})(CB|TCU)?$/;
+// A trailing `///` is an automated station's "cloud type unavailable" marker
+// (e.g. FEW024///). Allow it so the base height is still captured; type → none.
+const CLOUD_RE = /^(FEW|SCT|BKN|OVC|VV)(\d{3}|\/{3})(CB|TCU|\/{3})?$/;
 const TEMP_RE = /^(M?\d{1,2})\/(M?\d{1,2})?$/;
 const QNH_RE = /^Q(\d{3,4})$/;
 const ALTIM_RE = /^A(\d{4})$/;
