@@ -212,24 +212,46 @@ export function icingRiskComponent(worst: Severity, reason: string): RiskCompone
   return { key: 'icing', label: 'Icing', severity: worst, reason };
 }
 
-export function freshness(ageMin: number): { confidence: Confidence; component: RiskComponent } {
+export type SourceMode = 'metar' | 'model';
+
+export function freshness(
+  ageMin: number,
+  source: SourceMode = 'metar',
+): { confidence: Confidence; component: RiskComponent } {
   const confidence: Confidence = ageMin <= 60 ? 'OK' : ageMin <= 120 ? 'REDUCED' : 'LOW';
+  // Don't call it "METAR" when there is no METAR — model-only briefs use forecast data.
+  const label = source === 'model' ? 'Data freshness' : 'METAR freshness';
+  const noun = source === 'model' ? 'Forecast model data is' : 'METAR is';
   const reason =
     confidence === 'OK'
-      ? `METAR is ${ageMin} min old.`
-      : `METAR is ${ageMin} min old — may not reflect current conditions.`;
+      ? `${noun} ${ageMin} min old.`
+      : `${noun} ${ageMin} min old — may not reflect current conditions.`;
   return {
     confidence,
-    component: { key: 'freshness', label: 'METAR freshness', severity: confToSeverity[confidence], value: `${ageMin} min`, reason },
+    component: { key: 'freshness', label, severity: confToSeverity[confidence], value: `${ageMin} min`, reason },
   };
 }
 
-export function distance(distanceKm: number | null): { confidence: Confidence; component: RiskComponent } {
+export function distance(
+  distanceKm: number | null,
+  source: SourceMode = 'metar',
+): { confidence: Confidence; component: RiskComponent } {
   if (distanceKm == null) {
-    return {
-      confidence: 'OK',
-      component: { key: 'distance', label: 'Station distance', severity: 'GOOD', reason: 'Station distance unknown.' },
-    };
+    // No station distance: model-only briefs have no station at all — say so coherently.
+    return source === 'model'
+      ? {
+          confidence: 'OK',
+          component: {
+            key: 'distance',
+            label: 'Data source',
+            severity: 'GOOD',
+            reason: 'No nearby METAR station — using forecast model data for this location.',
+          },
+        }
+      : {
+          confidence: 'OK',
+          component: { key: 'distance', label: 'Station distance', severity: 'GOOD', reason: 'Station distance unknown.' },
+        };
   }
   const confidence: Confidence = distanceKm < 15 ? 'OK' : distanceKm <= 40 ? 'REDUCED' : 'LOW';
   const reason =
@@ -253,6 +275,8 @@ export interface RiskInputs {
   model?: ModelConditions | null;
   /** Resolved cloud base (m AGL) for cloud-immersion detection. */
   cloudBaseM?: number | null;
+  /** Data source: 'metar' (observed) or 'model' (Open-Meteo only). Drives freshness wording. */
+  source?: SourceMode;
   /** Reference time for freshness + the dew time-of-day amplifier; defaults to now. */
   now?: Date;
 }
@@ -273,8 +297,9 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
   // Compute age from the absolute observation timestamp + live `now` so it stays
   // correct as the page ages, rather than freezing the value captured at fetch.
   const ageMin = Math.max(0, Math.round((now.getTime() - metar.observedAt.getTime()) / 60000));
-  const fresh = freshness(ageMin);
-  const dist = distance(distanceKm);
+  const sourceMode = inputs.source ?? 'metar';
+  const fresh = freshness(ageMin, sourceMode);
+  const dist = distance(distanceKm, sourceMode);
   const confidence = worseConfidence(fresh.confidence, dist.confidence);
   const uncertain = confidence !== 'OK';
 

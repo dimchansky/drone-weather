@@ -36,6 +36,7 @@ export function App() {
             opsCeilingM: brief.opsCeilingM,
             model: brief.model,
             cloudBaseM: brief.cloudBase.baseM,
+            source: brief.source,
             now,
           })
         : null,
@@ -81,7 +82,11 @@ export function App() {
               <div className={styles.banner}>Couldn’t refresh ({error}); showing last data.</div>
             )}
 
-            <RiskSummary risk={liveRisk ?? brief.risk} observedAt={brief.metar.observedAt} />
+            <RiskSummary
+              risk={liveRisk ?? brief.risk}
+              observedAt={brief.metar.observedAt}
+              sourceMode={brief.source}
+            />
             <WindCompass wind={brief.metar.wind} />
             <StationCard brief={brief} now={now} />
             <VerticalAnalyzer brief={brief} />

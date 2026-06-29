@@ -37,4 +37,20 @@ describe('RiskSummary', () => {
     render(<RiskSummary risk={brief.risk} observedAt={brief.metar.observedAt} />);
     expect(screen.getByText(/^Observed at \d{2}:\d{2} LT;/)).toBeInTheDocument();
   });
+
+  it('uses model wording (no "METAR") for a model-only brief', () => {
+    const modelBrief = assembleBrief({
+      coord: { lat: 55.6, lon: 26.43 },
+      source: 'model',
+      metar: parseMetar('MODEL 281100Z 04004KT 9999 18/14 Q1015', { now: NOW }),
+      modelLevels: [],
+      now: NOW,
+    });
+    render(
+      <RiskSummary risk={modelBrief.risk} observedAt={modelBrief.metar.observedAt} sourceMode="model" />,
+    );
+    expect(screen.getByText('Data freshness')).toBeInTheDocument();
+    expect(screen.getByText(/^Model time \d{2}:\d{2} LT; Forecast model data is/)).toBeInTheDocument();
+    expect(screen.queryByText('METAR freshness')).not.toBeInTheDocument();
+  });
 });

@@ -64,6 +64,7 @@ export function assembleBrief(input: AssembleInput): Brief {
     opsCeilingM,
     model,
     cloudBaseM: cloudBase.baseM,
+    source: input.source,
     now,
   });
 

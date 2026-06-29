@@ -187,3 +187,33 @@ describe('assessRisk live freshness (age derived from observedAt + now)', () => 
     expect(at('2026-06-28T14:10:00Z').confidence).toBe('LOW'); // 130 min
   });
 });
+
+describe('freshness/distance wording by data source', () => {
+  it('labels freshness for a METAR brief', () => {
+    const f = freshness(28, 'metar');
+    expect(f.component.label).toBe('METAR freshness');
+    expect(f.component.reason).toMatch(/^METAR is 28 min old/);
+  });
+
+  it('labels freshness for a model-only brief (no METAR)', () => {
+    const f = freshness(28, 'model');
+    expect(f.component.label).toBe('Data freshness');
+    expect(f.component.reason).toMatch(/^Forecast model data is 28 min old/);
+  });
+
+  it('relabels the distance row as "Data source" for a model-only brief', () => {
+    const d = distance(null, 'model');
+    expect(d.component.label).toBe('Data source');
+    expect(d.component.reason).toMatch(/No nearby METAR station/);
+  });
+
+  it('assessRisk for a model brief never says "METAR" in freshness/distance', () => {
+    const metar = m('LFPG 281200Z 27006KT CAVOK 20/05 Q1016');
+    const r = assessRisk({ metar, icingWorst: 'GOOD', icingReason: 'low', distanceKm: null, source: 'model', now: NOW });
+    const fresh = r.components.find((c) => c.key === 'freshness')!;
+    const dist = r.components.find((c) => c.key === 'distance')!;
+    expect(fresh.label).toBe('Data freshness');
+    expect(dist.label).toBe('Data source');
+    expect(`${fresh.reason} ${dist.reason}`).not.toMatch(/METAR is/);
+  });
+});
