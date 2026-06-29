@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocationStore } from '../../store/locationStore';
 import { fmtCoord } from '../../utils/format';
+import { parseLatitudeInput, parseLongitudeInput } from '../../utils/coords';
 import styles from './LocationBar.module.css';
 
 export function LocationBar() {
@@ -36,13 +37,15 @@ export function LocationBar() {
 
   const submitManual = (e: React.FormEvent) => {
     e.preventDefault();
-    const la = Number(lat);
-    const lo = Number(lon);
-    if (Number.isFinite(la) && Number.isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180) {
+    // Accept both dot and comma decimals (mobile locale keyboards emit a comma).
+    const la = parseLatitudeInput(lat);
+    const lo = parseLongitudeInput(lon);
+    if (la != null && lo != null) {
       setCoord({ lat: la, lon: lo }, 'manual');
       setManual(false);
+      setGeoError(null);
     } else {
-      setGeoError('Enter a valid latitude (−90…90) and longitude (−180…180).');
+      setGeoError('Enter a valid latitude (−90…90) and longitude (−180…180). A dot or comma decimal both work.');
     }
   };
 
@@ -66,14 +69,22 @@ export function LocationBar() {
       {manual && (
         <form className={styles.manual} onSubmit={submitManual}>
           <input
+            type="text"
             inputMode="decimal"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="Latitude"
             value={lat}
             onChange={(e) => setLat(e.target.value)}
             aria-label="Latitude"
           />
           <input
+            type="text"
             inputMode="decimal"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="Longitude"
             value={lon}
             onChange={(e) => setLon(e.target.value)}
