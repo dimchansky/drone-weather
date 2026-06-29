@@ -8,8 +8,10 @@ import { cachedFetchJson } from './cache';
 
 const OM_BASE = 'https://api.open-meteo.com/v1/forecast';
 const OM_TTL_MS = 30 * 60 * 1000;
-// Pressure levels covering roughly the low-altitude drone envelope (surface–~1.5 km).
-const LEVELS = [1000, 950, 925, 900, 850] as const;
+// Pressure levels covering roughly the low-altitude drone envelope (surface–~1.5 km). 975 hPa
+// (~300 m AGL near sea level) sharpens the 100–500 m gap for the analyzer + model cloud tier —
+// a resolution improvement, not a cloud-base accuracy fix (see docs/cloud-base-research.md §3.1).
+const LEVELS = [1000, 975, 950, 925, 900, 850] as const;
 
 const SURFACE_VARS = [
   'temperature_2m',
