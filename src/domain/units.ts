@@ -23,3 +23,13 @@ export function round(value: number, decimals = 0): number {
   const r = Math.round(value * f) / f;
   return r === 0 ? 0 : r;
 }
+
+/** User-selectable wind display unit. Canonical wind values are always kept in knots. */
+export type WindUnit = 'kt' | 'ms' | 'kmh';
+
+/** Format a wind speed (canonical knots) in the chosen display unit, e.g. "7.7 m/s". */
+export function fmtWindSpeed(speedKt: number, unit: WindUnit): string {
+  if (unit === 'ms') return `${round(ktToMs(speedKt), 1)} m/s`;
+  if (unit === 'kmh') return `${round(ktToKmh(speedKt), 1)} km/h`;
+  return `${round(speedKt)} kt`;
+}

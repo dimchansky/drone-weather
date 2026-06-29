@@ -33,6 +33,37 @@ describe('gustRisk', () => {
   });
 });
 
+describe('wind/gust display unit', () => {
+  it('windRisk formats the value in the chosen unit (kt default)', () => {
+    expect(windRisk(15, 190).value).toBe('15 kt');
+    expect(windRisk(15, 190, 'ms').value).toBe('7.7 m/s');
+    expect(windRisk(15, 190, 'ms').reason).toMatch(/7\.7 m\/s \(15 kt\)/); // canonical kt as secondary
+    expect(windRisk(15, 190, 'kmh').value).toBe('27.8 km/h');
+  });
+
+  it('gustRisk value + spread use the chosen unit', () => {
+    expect(gustRisk(15, 25).value).toBe('25 kt (+10 kt)');
+    const ms = gustRisk(15, 25, 'ms');
+    expect(ms.value).toBe('12.9 m/s (+5.1 m/s)');
+    expect(ms.value).not.toMatch(/kt/);
+  });
+
+  it('assessRisk threads windUnit into wind & gust components', () => {
+    const r = assessRisk({
+      metar: m('KMCI 281200Z 19015G25KT CAVOK 20/05 Q1016'),
+      icingWorst: 'GOOD',
+      icingReason: 'low',
+      distanceKm: 5,
+      windUnit: 'ms',
+      now: NOW,
+    });
+    const wind = r.components.find((c) => c.key === 'wind')!;
+    const gust = r.components.find((c) => c.key === 'gust')!;
+    expect(wind.value).toMatch(/m\/s$/);
+    expect(gust.value).toMatch(/m\/s \(\+[\d.]+ m\/s\)/);
+  });
+});
+
 describe('visibilityRisk', () => {
   it('bands by metres', () => {
     expect(visibilityRisk(10000).severity).toBe('GOOD');

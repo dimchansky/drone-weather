@@ -9,7 +9,16 @@ import {
   hpaToInhg,
   inhgToHpa,
   round,
+  fmtWindSpeed,
 } from '../units';
+
+describe('fmtWindSpeed', () => {
+  it('formats canonical knots in the chosen display unit', () => {
+    expect(fmtWindSpeed(15, 'kt')).toBe('15 kt');
+    expect(fmtWindSpeed(15, 'ms')).toBe('7.7 m/s');
+    expect(fmtWindSpeed(15, 'kmh')).toBe('27.8 km/h');
+  });
+});
 
 describe('speed conversions', () => {
   it('converts knots to m/s and km/h', () => {

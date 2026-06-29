@@ -1,13 +1,10 @@
 // Display formatting helpers (presentation only).
-import { ktToMs, ktToKmh, mToFt, round } from '../domain/units';
+import { ktToMs, ktToKmh, mToFt, round, fmtWindSpeed, type WindUnit } from '../domain/units';
 import { compassPoint } from '../domain/geo';
-import type { AltUnit, WindUnit } from '../store/settingsStore';
+import type { AltUnit } from '../store/settingsStore';
 
-export function fmtWind(speedKt: number, unit: WindUnit): string {
-  if (unit === 'ms') return `${round(ktToMs(speedKt), 1)} m/s`;
-  if (unit === 'kmh') return `${round(ktToKmh(speedKt), 1)} km/h`;
-  return `${round(speedKt)} kt`;
-}
+/** Wind speed in the chosen unit (delegates to the canonical formatter). */
+export const fmtWind = (speedKt: number, unit: WindUnit): string => fmtWindSpeed(speedKt, unit);
 
 export const fmtWindAll = (speedKt: number): string =>
   `${round(speedKt)} kt · ${round(ktToMs(speedKt), 1)} m/s · ${round(ktToKmh(speedKt), 1)} km/h`;

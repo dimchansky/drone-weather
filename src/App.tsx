@@ -5,6 +5,7 @@ import { useNow } from './hooks/useNow';
 import { assessRisk } from './domain/risk';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
+import { useSettingsStore } from './store/settingsStore';
 import { LocationBar } from './components/Location/LocationBar';
 import { SettingsBar } from './components/SettingsBar/SettingsBar';
 import { RiskSummary } from './components/Risk/RiskSummary';
@@ -25,6 +26,9 @@ export function App() {
 
   // Tick the clock so age/freshness stay live while the app is open.
   const now = useNow(30000);
+  const windUnit = useSettingsStore((s) => s.windUnit);
+  // Recompute risk (a pure, no-network op) when the brief, clock, or wind unit changes so
+  // wind/gust values render in the selected unit without re-fetching weather.
   const liveRisk = useMemo(
     () =>
       brief
@@ -37,10 +41,11 @@ export function App() {
             model: brief.model,
             cloudBaseM: brief.cloudBase.baseM,
             source: brief.source,
+            windUnit,
             now,
           })
         : null,
-    [brief, now],
+    [brief, now, windUnit],
   );
 
   return (

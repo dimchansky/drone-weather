@@ -11,7 +11,7 @@ import type {
   RiskSummary,
   Severity,
 } from './types';
-import { ktToMs, mToFt, round } from './units';
+import { ktToMs, mToFt, round, fmtWindSpeed, type WindUnit } from './units';
 import { ceilingFt } from './clouds';
 import { rhFromDewPoint } from './humidity';
 import {
@@ -49,9 +49,13 @@ const worseConfidence = (a: Confidence, b: Confidence): Confidence => {
 };
 
 // ----- component risks -----
-export function windRisk(speedKt: number, dirDeg: number | null): RiskComponent {
-  const ms = ktToMs(speedKt);
-  const severity = windSeverity(ms);
+// Display wind in the user's unit; append the canonical knots as secondary context (only
+// when the chosen unit isn't already knots).
+const windWithKt = (speedKt: number, unit: WindUnit): string =>
+  unit === 'kt' ? fmtWindSpeed(speedKt, 'kt') : `${fmtWindSpeed(speedKt, unit)} (${round(speedKt)} kt)`;
+
+export function windRisk(speedKt: number, dirDeg: number | null, unit: WindUnit = 'kt'): RiskComponent {
+  const severity = windSeverity(ktToMs(speedKt));
   const from = dirDeg == null ? 'variable' : `${dirDeg}°`;
   const qual = { GOOD: 'light', CAUTION: 'moderate', HIGH: 'strong', NOFLY: 'very strong' }[
     severity
@@ -60,12 +64,12 @@ export function windRisk(speedKt: number, dirDeg: number | null): RiskComponent 
     key: 'wind',
     label: 'Wind',
     severity,
-    value: `${round(speedKt)} kt (${round(ms, 1)} m/s)`,
-    reason: `${qual[0].toUpperCase()}${qual.slice(1)} wind ${round(speedKt)} kt (~${round(ms, 1)} m/s) from ${from}. General guidance — apply your aircraft's wind limit.`,
+    value: fmtWindSpeed(speedKt, unit),
+    reason: `${qual[0].toUpperCase()}${qual.slice(1)} wind ${windWithKt(speedKt, unit)} from ${from}. General guidance — apply your aircraft's wind limit.`,
   };
 }
 
-export function gustRisk(speedKt: number, gustKt: number | null): RiskComponent {
+export function gustRisk(speedKt: number, gustKt: number | null, unit: WindUnit = 'kt'): RiskComponent {
   if (gustKt == null) {
     return { key: 'gust', label: 'Gusts', severity: 'GOOD', reason: 'No gusts reported.' };
   }
@@ -77,8 +81,8 @@ export function gustRisk(speedKt: number, gustKt: number | null): RiskComponent 
     key: 'gust',
     label: 'Gusts',
     severity,
-    value: `${round(gustKt)} kt (+${round(spread)} kt)`,
-    reason: `Gusts to ${round(gustKt)} kt, ${round(spread)} kt above the sustained wind. Gust spread raises loss-of-control risk.`,
+    value: `${fmtWindSpeed(gustKt, unit)} (+${fmtWindSpeed(spread, unit)})`,
+    reason: `Gusts to ${windWithKt(gustKt, unit)}, ${fmtWindSpeed(spread, unit)} above the sustained wind. Gust spread raises loss-of-control risk.`,
   };
 }
 
@@ -277,6 +281,8 @@ export interface RiskInputs {
   cloudBaseM?: number | null;
   /** Data source: 'metar' (observed) or 'model' (Open-Meteo only). Drives freshness wording. */
   source?: SourceMode;
+  /** Display unit for wind/gust values + reasons (UI preference). Canonical stays in knots. */
+  windUnit?: WindUnit;
   /** Reference time for freshness + the dew time-of-day amplifier; defaults to now. */
   now?: Date;
 }
@@ -285,9 +291,10 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
   const { metar, icingWorst, icingReason, distanceKm, opsCeilingM } = inputs;
   const now = inputs.now ?? new Date();
 
+  const windUnit = inputs.windUnit ?? 'kt';
   const weather: RiskComponent[] = [
-    windRisk(metar.wind.speedKt, metar.wind.dirDeg),
-    gustRisk(metar.wind.speedKt, metar.wind.gustKt),
+    windRisk(metar.wind.speedKt, metar.wind.dirDeg, windUnit),
+    gustRisk(metar.wind.speedKt, metar.wind.gustKt, windUnit),
     visibilityRisk(metar.visibilityM),
     moistureRisk(metar, { model: inputs.model, cloudBaseM: inputs.cloudBaseM, opsCeilingM, now }),
     ceilingRisk(metar, opsCeilingM),
