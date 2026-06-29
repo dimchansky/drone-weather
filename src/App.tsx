@@ -40,6 +40,7 @@ export function App() {
             opsCeilingM: brief.opsCeilingM,
             model: brief.model,
             cloudBaseM: brief.cloudBase.baseM,
+            profile: brief.profile,
             source: brief.source,
             windUnit,
             now,

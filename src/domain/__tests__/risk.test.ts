@@ -10,9 +10,18 @@ import {
   assessRisk,
 } from '../risk';
 import { parseMetar } from '../metar';
+import type { ProfileLevel, VerticalProfile } from '../types';
 
 const NOW = new Date('2026-06-28T13:00:00Z');
 const m = (raw: string) => parseMetar(raw, { now: NOW });
+
+const modelProfile = (rows: Partial<ProfileLevel>[]): VerticalProfile => ({
+  source: 'model',
+  note: '',
+  levels: rows
+    .map((r) => ({ altM: 0, tempC: 15, dewpC: null, rhPct: null, cloudPct: null, source: 'model' as const, ...r }))
+    .sort((a, b) => a.altM - b.altM),
+});
 
 describe('windRisk', () => {
   it('bands by m/s (kt input)', () => {
@@ -121,6 +130,28 @@ describe('moistureRisk (moisture & wetness)', () => {
     });
     expect(r.severity).toBe('CAUTION');
     expect(r.reason).toMatch(/70%/);
+  });
+
+  it('adds a coarse model elevated near-saturation caution (dry surface)', () => {
+    const profile = modelProfile([
+      { altM: 0, tempC: 20, dewpC: 8, rhPct: 46 }, // dry surface (spread 12)
+      { altM: 250, tempC: 18, dewpC: 17.5, rhPct: 97 }, // near-saturated layer within the climb
+    ]);
+    const r = moistureRisk(m('LFPG 281200Z 27006KT 9999 20/08 Q1015'), { profile, opsCeilingM: 120 });
+    expect(r.severity).toBe('CAUTION');
+    expect(r.reason).toMatch(/near-saturated layer/i);
+    expect(r.reason).toMatch(/model/i);
+  });
+
+  it('surface saturation dominates even when the model profile misses it', () => {
+    // Saturated calm surface → HIGH condensation; a dry model profile must NOT downgrade it.
+    const profile = modelProfile([
+      { altM: 0, tempC: 11, dewpC: 11, rhPct: 100 },
+      { altM: 300, tempC: 9, dewpC: -2, rhPct: 40 }, // dry aloft — model sees no low moisture
+    ]);
+    const r = moistureRisk(m('EFHK 281200Z 00000KT 9999 11/11 Q1018'), { profile, opsCeilingM: 120 });
+    expect(r.severity).toBe('HIGH');
+    expect(r.reason).not.toMatch(/model/i); // surface-driven reason wins, not the model layer
   });
 });
 

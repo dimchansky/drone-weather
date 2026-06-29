@@ -10,9 +10,11 @@ import type {
   RiskComponent,
   RiskSummary,
   Severity,
+  VerticalProfile,
 } from './types';
 import { ktToMs, mToFt, round, fmtWindSpeed, type WindUnit } from './units';
 import { ceilingFt } from './clouds';
+import { envSaturationHeightM } from './saturation';
 import { rhFromDewPoint } from './humidity';
 import {
   hasFog,
@@ -106,6 +108,8 @@ export interface MoistureInputs {
   model?: ModelConditions | null;
   cloudBaseM?: number | null;
   opsCeilingM?: number;
+  /** Vertical profile for the coarse model elevated near-saturation supplement. */
+  profile?: VerticalProfile | null;
   now?: Date;
 }
 
@@ -176,6 +180,28 @@ export function moistureRisk(metar: Metar, opts: MoistureInputs = {}): RiskCompo
       candidates.push({ severity: 'HIGH', reason: `${rhTxt} in calm air — condensation/dew likely.`, value: 'condensation' });
     } else {
       candidates.push({ severity: 'CAUTION', reason: `${rhTxt} — condensation possible (wind keeps it lower).`, value: 'near-sat' });
+    }
+  }
+
+  // Coarse model supplement: a near-saturated layer just within/above the climb that the surface
+  // obs may miss. ADDITIVE only (CAUTION) — worst-wins means it can never suppress a stronger
+  // surface/METAR-driven warning. Strict thresholds keep false alarms low given coarse resolution.
+  // The model under-detects shallow low layers (docs/cloud-base-research.md §3.2), so this only
+  // adds a flag when the model positively sees moisture; it never lowers the surface verdict.
+  const profile = opts.profile;
+  if (profile?.source === 'model') {
+    const satM = envSaturationHeightM(profile.levels, {
+      minM: 30, // skip the surface band — handled by the near-saturation block above
+      capM: opsCeilingM + 200,
+      spreadThresh: 1,
+      rhThresh: 95,
+    });
+    if (satM != null) {
+      candidates.push({
+        severity: 'CAUTION',
+        reason: `Model: near-saturated layer ~${round(satM)} m AGL (coarse) — damp air within your climb.`,
+        value: `~${round(satM)} m`,
+      });
     }
   }
 
@@ -279,6 +305,8 @@ export interface RiskInputs {
   model?: ModelConditions | null;
   /** Resolved cloud base (m AGL) for cloud-immersion detection. */
   cloudBaseM?: number | null;
+  /** Vertical profile for the coarse model elevated near-saturation supplement. */
+  profile?: VerticalProfile | null;
   /** Data source: 'metar' (observed) or 'model' (Open-Meteo only). Drives freshness wording. */
   source?: SourceMode;
   /** Display unit for wind/gust values + reasons (UI preference). Canonical stays in knots. */
@@ -296,7 +324,7 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
     windRisk(metar.wind.speedKt, metar.wind.dirDeg, windUnit),
     gustRisk(metar.wind.speedKt, metar.wind.gustKt, windUnit),
     visibilityRisk(metar.visibilityM),
-    moistureRisk(metar, { model: inputs.model, cloudBaseM: inputs.cloudBaseM, opsCeilingM, now }),
+    moistureRisk(metar, { model: inputs.model, cloudBaseM: inputs.cloudBaseM, profile: inputs.profile, opsCeilingM, now }),
     ceilingRisk(metar, opsCeilingM),
     icingRiskComponent(icingWorst, icingReason),
   ];
