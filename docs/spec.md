@@ -352,13 +352,28 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 
 ---
 
-## 7. State (Zustand, persisted)
+## 7. State (Zustand)
 
-| Store | Persists | Notes |
+| Store | Persisted (localStorage key) | Notes |
 |---|---|---|
-| `locationStore` | last coords, source (gps/manual), selected ICAO, station list | manual entry + station switch |
-| `briefStore` | last good brief (metar/taf/profile/risk), fetchedAt | drives offline/stale UI; transient loading/error not persisted |
-| `settingsStore` | units (wind kt/ms/kmh, alt ft/m), ops ceiling (default 120 m), theme, thresholds | no-flash theme bootstrap in `main.tsx` |
+| `locationStore` | **yes** — `drone-weather-location`; `partialize` → `coord`, `source` (`gps`/`manual`/`pasted`), `selectedIcao` | `setCoord` resets `selectedIcao` so a new location re-picks nearest |
+| `settingsStore` | **yes** — `drone-weather-settings`; `partialize` → `windUnit`, `altUnit`, `opsCeilingM`, `theme` | no-flash theme bootstrap in `main.tsx` |
+| `briefStore` | **no** (transient) | `status`/`brief`/`nearby`/`error`/`offline`; offline relies on the HTTP cache (§6.4), not on persisting the brief |
+
+### 7.1 Location input, refresh & startup
+- **Input sources** all funnel through `setCoord(coord, source)`: GPS (`navigator.geolocation`),
+  manual two-field entry (`parseLatitudeInput`/`parseLongitudeInput`), and **paste** (a
+  single field parsed by `parseCoordinatePair`, with a best-effort `navigator.clipboard.readText`
+  one-tap path and an always-available inline fallback field). Malformed/ambiguous input is
+  rejected with a helpful example (`Try: 54.6651, 25.2169`).
+- **Refresh** re-runs `briefStore.load(coord, { selectedIcao, opsCeilingM, force: true })` for
+  the current stored coord (never re-acquires GPS, never mutates the coord). `force` threads to
+  the cache to bypass the TTL and revalidate; a failed refresh keeps the last good brief
+  (existing "couldn't refresh" banner) and shows `Refreshing…` while in flight.
+- **Startup:** persisted coord/settings hydrate synchronously → the location is shown
+  immediately → `useBriefLoader` auto-fetches the brief (normal cache) → the visible Refresh
+  offers an explicit force-revalidate. A persisted `selectedIcao` that is no longer in range
+  falls back to the nearest station.
 
 ---
 

@@ -75,6 +75,15 @@
 - [x] Worker deployed (Cloudflare) + frontend (GitHub Pages); end-to-end verified in-browser
 - [x] README + docs updated with live URL
 
+## Post-v0.1 enhancements (shipped)
+- [x] Robust paste-coordinates parser (`parseCoordinatePair`) + Paste workflow
+      (clipboard one-tap + inline fallback field)
+- [x] Refresh action (force/revalidate through the cache) with `Refreshing…` state
+- [x] Persistence hardened: `partialize` on location/settings; `pasted` source;
+      documented startup behavior (see spec §7.1)
+- [x] METAR observed time + live-updating age; locale comma-decimal input
+- [x] Defensive empty/204 response handling (model fallback for station-less sites)
+
 ## Backlog / later (see idea doc §13)
 - [ ] Configurable per-drone thresholds
 - [ ] Bundled offline station index (OurAirports-derived)
