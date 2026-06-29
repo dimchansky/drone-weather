@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Card } from '../common/Card';
 import { SEVERITY_VAR } from '../../utils/severity';
 import { maxSeverity } from '../../domain/severity';
+import { detectInversion } from '../../domain/profile';
 import { fmtAlt } from '../../utils/format';
 import { round } from '../../domain/units';
 import { useSettingsStore } from '../../store/settingsStore';
 import type { Brief } from '../../domain/brief';
 import type { Severity } from '../../domain/types';
+import { altitudeTicks } from './ticks';
 import styles from './VerticalAnalyzer.module.css';
 
 const W = 320;
@@ -31,6 +33,11 @@ export function VerticalAnalyzer({ brief }: { brief: Brief }) {
 
   const levels = brief.icing.levels.filter((l) => l.altM <= maxAlt);
   const yFor = (alt: number) => BOTTOM - (alt / maxAlt) * (BOTTOM - TOP);
+
+  // Label only a range-appropriate subset (bands still use every level); look up temps by altitude.
+  const byAlt = new Map(brief.icing.levels.map((l) => [l.altM, l]));
+  const ticks = altitudeTicks(maxAlt);
+  const inversion = detectInversion(brief.icing.levels);
 
   const bands = levels.slice(0, -1).map((lo, i) => {
     const hi = levels[i + 1];
@@ -63,13 +70,15 @@ export function VerticalAnalyzer({ brief }: { brief: Brief }) {
         ))}
         <rect x={COL_L} y={TOP} width={COL_R - COL_L} height={BOTTOM - TOP} className={styles.colOutline} />
 
-        {levels.map((l) => {
-          const y = yFor(l.altM);
+        {ticks.map((altM) => {
+          const l = byAlt.get(altM);
+          if (!l) return null;
+          const y = yFor(altM);
           return (
-            <g key={l.altM}>
+            <g key={altM}>
               <line x1={COL_L - 4} y1={y} x2={COL_L} y2={y} className={styles.tick} />
               <text x={COL_L - 8} y={y} className={styles.axisLabel} textAnchor="end" dominantBaseline="central">
-                {fmtAlt(l.altM, altUnit)}
+                {fmtAlt(altM, altUnit)}
               </text>
               <text x={COL_R + 8} y={y} className={styles.tempLabel} dominantBaseline="central">
                 {round(l.tempC, 1)}°
@@ -104,6 +113,12 @@ export function VerticalAnalyzer({ brief }: { brief: Brief }) {
         ))}
       </div>
 
+      {inversion && (
+        <p className={styles.inversion}>
+          Low-level temperature inversion: temperature rises to ~{round(inversion.topM)} m before
+          falling (model).
+        </p>
+      )}
       {!showBase && baseM != null && baseM > maxAlt && (
         <p className={styles.note}>Cloud base (~{round(baseM)} m) is above the shown range.</p>
       )}

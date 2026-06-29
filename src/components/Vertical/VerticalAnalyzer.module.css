@@ -98,3 +98,13 @@
   color: var(--text-dim);
   line-height: 1.4;
 }
+
+.inversion {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
