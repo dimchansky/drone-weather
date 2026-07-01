@@ -99,8 +99,19 @@
 - [x] **True location timezone** — Open-Meteo `timezone=auto` → `LocationTime` on the Brief;
       daylight + TAF-local windows shown in the flight-site zone (UTC secondary for TAF); device
       fallback. No bundled tz dataset.
+- [x] **Cloud & ceiling readability (Option D)** — pure `components/Clouds/cloudText.ts` turns
+      aviation codes into plain language: human layer labels + "how much sky", height "above
+      ground", raw code as a dim secondary tag; `CEILING` tag on BKN/OVC/VV; explained
+      severity-coloured CB (NO-FLY) / TCU (CAUTION, card-only) callouts; a drone-relevance line
+      vs the 120 m ops band + a ceiling-vs-base explainer. Presentation only — no parser/verdict
+      change; raw METAR verbatim. Verified live at LSZB (plain), SBCH (TCU), LSZH (CB).
 
 ## Backlog / later (see idea doc §13)
+- [ ] **Wire TCU / convective cloud into the risk engine as CAUTION** — today a towering-cumulus
+      (TCU) layer with no CB and no `TS` group produces no risk signal (`hasConvectiveCloud` in
+      `domain/metar.ts` is defined but unused); it is only explained in the Cloud & ceiling card.
+      Developing convection is relevant for drones, so TCU should probably become at least a
+      CAUTION-level factor (verdict-affecting) — deferred from the presentation-only clouds pass.
 - [ ] Aircraft profiles / configurable per-drone thresholds — **deprioritized (optional)**
 - [ ] Bundled offline station index (OurAirports-derived)
 - [ ] Airspace / legal module (separate, clearly delineated)

@@ -423,7 +423,16 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
   speed in all three units; gust; `routeAdvice` (shared with the banner).
 - `VerticalAnalyzer` — SVG chart: altitude axis (focus 0–120 m, toggle to 1000 m),
   temperature line, cloud-base marker(s), icing band coloring, safe/caution/high zones.
-- `Clouds` — layers (ft + m), ceiling, CAVOK note, or estimated-base note (source tagged).
+- `Clouds` — **plain-language** cloud layers (`components/Clouds/cloudText.ts`, pure + tested):
+  each layer reads as a human headline + "how much sky" (`Scattered clouds — up to about half the
+  sky`), a height "above ground" (ft + m), and the raw code only as a dim secondary tag
+  (`SCT · 3–4/8`); ceiling layers (BKN/OVC/VV) carry a `CEILING` tag (SCT/FEW never do). Dangerous
+  cloud types get an explained, severity-coloured callout: **CB → NO-FLY** (cumulonimbus /
+  thunderstorm cloud — it already drives the verdict via `hasThunderstorm`), **TCU → CAUTION**
+  (towering cumulus, card-only — the verdict is unchanged; see the TCU risk-engine follow-up in
+  todo.md). A drone-relevance line ties the resolved cloud base to the 120 m ops band (reusing the
+  same resolved base + ceiling as the `VerticalHazardStrip`), plus the ceiling-vs-base explainer and
+  the source-tagged base note. Presentation only; no parser or verdict change; raw METAR verbatim.
 - `ThermoMoisture` — T, Td, RH, spread, with interpretation (QNH promoted to `StatusStrip`).
 - `Station` — ICAO/name, distance, bearing + compass point, METAR age, far/stale warning.
 - `TafDetailsCard` — decoded, period-by-period TAF (`components/Taf/tafDetail.ts` over `parseTaf`

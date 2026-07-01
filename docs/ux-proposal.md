@@ -113,6 +113,19 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   Every non-raw clock time follows this rule — the `StatusStrip` (fetch/model time) and `StationCard`
   (METAR observed + fetch time) also render in the flight-site zone; the raw METAR/TAF stay verbatim.
 
+- **Cloud & ceiling readability — Option D (done 2026-07-01):** the Layer-3 Cloud & ceiling card
+  no longer speaks raw aviation shorthand. A pure, tested `components/Clouds/cloudText.ts` turns
+  each layer into a human headline + a plain "how much sky" phrase (`Scattered clouds — up to about
+  half the sky`), a height "above ground" (ft + m), and the raw code only as a **dim secondary tag**
+  (`SCT · 3–4/8`); BKN/OVC/VV layers carry a `CEILING` tag (SCT/FEW never do). Dangerous cloud types
+  get an **explained, severity-coloured callout** — **CB → NO-FLY** (cumulonimbus / thunderstorm
+  cloud; already the verdict driver via `hasThunderstorm`) and **TCU → CAUTION** (towering cumulus,
+  **card-only** — the verdict is unchanged). A one-line **drone-relevance** sentence ties the
+  resolved cloud base to the 120 m ops band (same resolved base + ceiling as the
+  `VerticalHazardStrip`, so they never contradict), alongside a ceiling-vs-base explainer.
+  Presentation only — no parser or verdict change; raw METAR stays verbatim. A follow-up is logged
+  (todo.md) to wire TCU/convective cloud into the risk engine as a CAUTION-level factor later.
+
 - **TAF period-by-period detail card (done 2026-07-01):** a Layer-3 collapsible `TafDetailsCard`
   between the compact `TafStrip` and the raw TAF — one decoded section per parsed period (human
   type, local + UTC window, unit-aware wind/gusts/visibility, plain-English weather, clouds/ceiling,

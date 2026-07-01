@@ -1,31 +1,52 @@
 .layers {
   list-style: none;
-  margin: 0 0 12px;
+  margin: 12px 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .layers li {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.cover {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.layerMain {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.ceilingTag {
+  font-size: 0.68rem;
   font-weight: 700;
-  width: 3.2em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+.layerMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.85rem;
 }
 
 .base {
   font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
-.okta {
+.raw {
   margin-left: auto;
-  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
   color: var(--text-dim);
 }
 
@@ -56,9 +77,15 @@
   font-weight: 600;
 }
 
+.relevance {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .note,
 .muted {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   font-size: 0.82rem;
   color: var(--text-dim);
 }
