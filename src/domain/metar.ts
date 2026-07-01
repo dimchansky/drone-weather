@@ -32,6 +32,9 @@ const OBS_TIME_RE = /^(\d{6})Z$/;
 export const WIND_RE = /^(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?(KT|MPS|KMH)$/;
 export const VAR_RE = /^(\d{3})V(\d{3})$/;
 export const VIS_M_RE = /^(\d{4})(?:NDV)?$/;
+// Directional minimum visibility, e.g. `4000E` / `1400SW` (metres + a compass direction). Basic
+// handling only: capture the value as prevailing visibility when no better prevailing vis is set.
+export const DIR_VIS_RE = /^(\d{4})[NSEW]{1,2}$/;
 export const VIS_SM_RE = /^(M|P)?(\d{1,2})(?:\/(\d{1,2}))?SM$/;
 export const FRACTION_SM_RE = /^(\d{1,2})\/(\d{1,2})SM$/;
 const RVR_RE = /^R\d{2}[LCR]?\//;
@@ -213,6 +216,13 @@ export function parseMetar(raw: string, opts: ParseMetarOptions = {}): Metar {
     }
 
     if (metar.visibilityM == null && (m = tok.match(VIS_M_RE))) {
+      const meters = parseInt(m[1], 10);
+      metar.visibilityM = meters >= 9999 ? 10000 : meters;
+      continue;
+    }
+    // Directional minimum visibility (4000E, 1400SW): use its value only when no prevailing
+    // visibility has been captured, so we don't lose a low-visibility signal.
+    if (metar.visibilityM == null && (m = tok.match(DIR_VIS_RE))) {
       const meters = parseInt(m[1], 10);
       metar.visibilityM = meters >= 9999 ? 10000 : meters;
       continue;

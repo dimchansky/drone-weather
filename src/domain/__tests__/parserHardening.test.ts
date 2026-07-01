@@ -116,3 +116,25 @@ describe('parser hardening B1 — automated //////CB / //////TCU convective mark
     expect(parseCloudToken('BKN014///')).toMatchObject({ cover: 'BKN', baseFt: 1400, cb: false, tcu: false });
   });
 });
+
+// --- B2: directional minimum visibility (4000E) captured as prevailing metres when none is set ---
+describe('parser hardening B2 — directional visibility', () => {
+  it('captures 4000E as 4000 m when no prevailing visibility is present (METAR)', () => {
+    const raw = 'FIMP 191000Z 04006KT 4000E -SHRA FEW015 BKN080 24/22 Q1015';
+    const r = m(raw);
+    expect(r.visibilityM).toBe(4000);
+    expect(r.raw).toBe(raw); // token preserved verbatim
+    expect(r.weather.map((w) => w.raw)).toContain('-SHRA');
+  });
+
+  it('does not override a prevailing visibility already reported', () => {
+    // 9999 (→10000) is prevailing; a following directional min is ignored.
+    expect(m('EGLL 011220Z 24012KT 9999 4000E SCT038 12/06 Q1015').visibilityM).toBe(10000);
+  });
+
+  it('captures 4000E inside a TAF group without flagging it as an unsupported token', () => {
+    const r = t('TAF FIMP 011100Z 0112/0218 04006KT 4000E SHRA BKN012');
+    expect(r.periods[0].visibilityM).toBe(4000);
+    expect(r.warnings).not.toContain('4000E');
+  });
+});

@@ -13,6 +13,7 @@ import {
   WIND_RE,
   VAR_RE,
   VIS_M_RE,
+  DIR_VIS_RE,
   VIS_SM_RE,
   FRACTION_SM_RE,
   parseWind,
@@ -209,6 +210,12 @@ export function parseTaf(raw: string, opts: ParseTafOptions = {}): ParsedTaf {
       continue;
     }
     if (current.visibilityM == null && (m = tok.match(VIS_M_RE))) {
+      const meters = parseInt(m[1], 10);
+      current.visibilityM = meters >= 9999 ? 10000 : meters;
+      continue;
+    }
+    // Directional minimum visibility (4000E) — value only, when no prevailing vis is set for the group.
+    if (current.visibilityM == null && (m = tok.match(DIR_VIS_RE))) {
       const meters = parseInt(m[1], 10);
       current.visibilityM = meters >= 9999 ? 10000 : meters;
       continue;
