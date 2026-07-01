@@ -8,6 +8,7 @@ import { precipNow } from './domain/precip';
 import { opsBandHazard } from './domain/vertical';
 import { daylight, daylightSeverity } from './domain/sun';
 import { summarizeForecast } from './domain/forecast';
+import { parseTaf, summarizeTaf } from './domain/taf';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
@@ -21,6 +22,8 @@ import { DaylightStrip } from './components/Daylight/DaylightStrip';
 import { daylightBannerLine } from './components/Daylight/daylightText';
 import { ForecastStrip } from './components/Forecast/ForecastStrip';
 import { forecastBannerNote } from './components/Forecast/forecastText';
+import { TafStrip } from './components/Taf/TafStrip';
+import { tafBannerNote } from './components/Taf/tafText';
 import type { SecondaryLine } from './components/Risk/DecisionBanner';
 import { WindCompass } from './components/Wind/WindCompass';
 import { StationCard } from './components/Station/StationCard';
@@ -72,12 +75,24 @@ export function App() {
   // stays live; wind values are formatted per unit in the strip/note.
   const fc = useMemo(() => (brief ? summarizeForecast(now, brief.forecast) : null), [brief, now]);
 
-  // Banner secondary lines: daylight (always) + a short forecast note only when it's notable.
+  // TAF (aviation airport forecast) summary — parsed from the raw TAF, near-term hazards only.
+  // Advisory: kept separate from the Open-Meteo point forecast; never changes the verdict.
+  const taf = useMemo(() => {
+    if (!brief?.taf) return null;
+    const ref = brief.taf.validFrom ?? brief.taf.issuedAt ?? now;
+    return summarizeTaf(parseTaf(brief.taf.raw, { reference: ref }), now);
+  }, [brief, now]);
+
+  // Banner secondary lines: daylight (always) + short notes only when notable (forecast, then TAF).
   const secondary: SecondaryLine[] = [];
   if (dl) secondary.push({ text: daylightBannerLine(dl, now), severity: daylightSeverity(dl.phase) });
   if (fc) {
     const note = forecastBannerNote(fc, windUnit);
     if (note) secondary.push({ text: note, severity: fc.severity });
+  }
+  if (taf) {
+    const note = tafBannerNote(taf);
+    if (note) secondary.push({ text: note, severity: taf.severity });
   }
 
   return (
@@ -126,6 +141,7 @@ export function App() {
             <StatusStrip brief={brief} now={now} />
             <PrecipNowPill precip={precipNow(brief.metar, brief.model)} />
             {fc && <ForecastStrip forecast={fc} windUnit={windUnit} />}
+            {taf && <TafStrip summary={taf} windUnit={windUnit} altUnit={altUnit} />}
             {dl && <DaylightStrip daylight={dl} />}
             <RiskFactors risk={liveRisk ?? brief.risk} />
             <VerticalHazardStrip
