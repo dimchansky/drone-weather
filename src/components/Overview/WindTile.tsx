@@ -1,6 +1,6 @@
-// Compact square wind tile — the shared compass (unchanged clarity) plus speed in the selected
-// unit, FROM direction with drift, and compact gust / variable-sector lines. Nothing verdict-like:
-// wind severity lives in the risk engine.
+// Compact square wind tile — the shared compass front and center, speed large in the selected
+// unit, explicit From/Drifts bearings, and gusts / variable sector as compact chips. Nothing
+// verdict-like: wind severity lives in the risk engine.
 
 import { compassPoint } from '../../domain/geo';
 import { ktToMs, ktToKmh, round, fmtWindSpeed } from '../../domain/units';
@@ -20,11 +20,6 @@ export function WindTile({ wind }: { wind: Wind }) {
   const primaryUnit = windUnit === 'ms' ? 'm/s' : windUnit === 'kmh' ? 'km/h' : 'kt';
 
   const driftDeg = wind.dirDeg != null ? (wind.dirDeg + 180) % 360 : null;
-  const from = wind.calm
-    ? 'Calm'
-    : wind.dirDeg != null
-      ? `from ${wind.dirDeg}° ${compassPoint(wind.dirDeg)}${driftDeg != null ? ` → ${compassPoint(driftDeg)}` : ''}`
-      : 'Variable direction';
 
   return (
     <div className={styles.tile}>
@@ -35,13 +30,34 @@ export function WindTile({ wind }: { wind: Wind }) {
           <span className={styles.big}>{primaryNum}</span>
           <span className={styles.bigUnit}>{primaryUnit}</span>
         </div>
-        <div className={styles.windFrom}>{from}</div>
-        {wind.gustKt != null && (
-          <div className={styles.gust}>Gusts {fmtWindSpeed(wind.gustKt, windUnit)}</div>
+        {wind.calm ? (
+          <div className={styles.windFrom}>Calm</div>
+        ) : wind.dirDeg != null ? (
+          <>
+            <div className={styles.windFrom}>
+              From {wind.dirDeg}° {compassPoint(wind.dirDeg)}
+            </div>
+            {driftDeg != null && (
+              <div className={styles.windDrift}>
+                Drifts {driftDeg}° {compassPoint(driftDeg)}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className={styles.windFrom}>Variable direction</div>
         )}
-        {wind.varFromDeg != null && wind.varToDeg != null && (
-          <div className={styles.varNote}>
-            var {wind.varFromDeg}°–{wind.varToDeg}°
+        {(wind.gustKt != null || (wind.varFromDeg != null && wind.varToDeg != null)) && (
+          <div className={styles.chips}>
+            {wind.gustKt != null && (
+              <span className={`${styles.chip} ${styles.chipHigh}`}>
+                G {fmtWindSpeed(wind.gustKt, windUnit)}
+              </span>
+            )}
+            {wind.varFromDeg != null && wind.varToDeg != null && (
+              <span className={`${styles.chip} ${styles.chipCaution}`}>
+                Var {wind.varFromDeg}–{wind.varToDeg}°
+              </span>
+            )}
           </div>
         )}
       </div>

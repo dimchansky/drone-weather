@@ -43,9 +43,29 @@
   color: var(--text);
 }
 
+/* Quiet/secondary variant once a location is set: smaller, no filled primary — the dashboard
+   below is the hero. Buttons keep comfortable tap targets and their text labels. */
+.rowCompact .primary,
+.rowCompact .ghost {
+  padding: 6px 11px;
+  font-size: 0.8rem;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.rowCompact .primary:hover,
+.rowCompact .ghost:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
 .current {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 

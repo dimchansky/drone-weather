@@ -4,6 +4,7 @@
 
 import type { Brief } from '../../domain/brief';
 import type { Daylight } from '../../domain/sun';
+import type { ForecastSummary } from '../../domain/forecast';
 import { CurrentWeatherTile } from './CurrentWeatherTile';
 import { ThermoTile } from './ThermoTile';
 import { WindTile } from './WindTile';
@@ -13,18 +14,25 @@ import styles from './OverviewGrid.module.css';
 export function OverviewGrid({
   brief,
   daylight,
+  forecast,
   now,
 }: {
   brief: Brief;
   daylight: Daylight;
+  forecast: ForecastSummary | null;
   now: Date;
 }) {
   return (
     <section className={styles.grid} aria-label="Weather overview">
-      <CurrentWeatherTile brief={brief} phase={daylight.phase} />
+      <CurrentWeatherTile brief={brief} phase={daylight.phase} forecast={forecast} />
       <ThermoTile metar={brief.metar} model={brief.model} />
       <WindTile wind={brief.metar.wind} />
-      <DaylightTile daylight={daylight} locationTime={brief.locationTime} now={now} />
+      <DaylightTile
+        daylight={daylight}
+        locationTime={brief.locationTime}
+        coord={brief.coord}
+        now={now}
+      />
     </section>
   );
 }

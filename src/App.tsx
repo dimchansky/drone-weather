@@ -131,7 +131,7 @@ export function App() {
             )}
 
             {/* Visual dashboard — the plain "what's the weather" answer; decision layers follow */}
-            {dl && <OverviewGrid brief={brief} daylight={dl} now={now} />}
+            {dl && <OverviewGrid brief={brief} daylight={dl} forecast={fc} now={now} />}
 
             {/* Layer 1 — the decision */}
             <DecisionBanner risk={liveRisk ?? brief.risk} wind={brief.metar.wind} secondary={secondary} />

@@ -147,7 +147,8 @@ export function LocationBar() {
 
   return (
     <div className={styles.bar}>
-      <div className={styles.row}>
+      {/* Once a location is set, the actions turn quiet/secondary — the weather is the hero. */}
+      <div className={coord ? `${styles.row} ${styles.rowCompact}` : styles.row}>
         <button className={styles.primary} onClick={useGps} disabled={locating}>
           <PinIcon />
           {locating ? 'Locating…' : 'My location'}

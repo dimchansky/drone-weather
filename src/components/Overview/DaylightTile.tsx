@@ -1,16 +1,18 @@
-// Light availability at a glance: a mini sun arc with the sun's sunrise→sunset progress, plus
-// sunrise/sunset, remaining daylight, the evening golden hour, and the current phase. At night
-// the arc shows a moon and the next sunrise. All times in the flight-site local time.
+// Light availability at a glance: the current phase, a mini sun arc with sunrise→sunset progress,
+// the next important event big (remaining daylight while the sun is up, the next sunrise when it
+// is down), and civil-dawn/dusk + golden-hour context lines. Times use the flight-site local time.
+// Dawn/golden for "tomorrow" reuse the existing sunTimes() for the next-sunrise day.
 
+import type { Coord, LocationTime } from '../../domain/types';
 import type { Daylight, DaylightPhase } from '../../domain/sun';
-import type { LocationTime } from '../../domain/types';
+import { sunTimes } from '../../domain/sun';
 import { fmtTimeInZone, fmtDuration } from '../../utils/time';
 import { sunArcProgress } from './sunArc';
 import { MOON_PATH } from './WeatherIcon';
 import styles from './OverviewGrid.module.css';
 
 const PHASE_LABEL: Record<DaylightPhase, string> = {
-  day: 'Day',
+  day: 'Daylight',
   golden: 'Golden hour',
   civilTwilight: 'Civil twilight',
   night: 'Night',
@@ -22,10 +24,12 @@ const ARC_LEN = Math.PI * 40;
 export function DaylightTile({
   daylight,
   locationTime,
+  coord,
   now,
 }: {
   daylight: Daylight;
   locationTime: LocationTime;
+  coord: Coord;
   now: Date;
 }) {
   const { times, phase, polar } = daylight;
@@ -34,6 +38,26 @@ export function DaylightTile({
 
   const sunX = progress != null ? 50 - 40 * Math.cos(Math.PI * progress) : null;
   const sunY = progress != null ? 50 - 40 * Math.sin(Math.PI * progress) : null;
+
+  const sunUp = daylight.daylightRemainingMin != null;
+  // Sun below the horizon: dawn/golden context belongs to the day of the NEXT sunrise (which is
+  // tomorrow once the evening events have passed).
+  const nextTimes = !sunUp && daylight.nextSunrise ? sunTimes(daylight.nextSunrise, coord) : null;
+  const eveningTwilight = phase === 'civilTwilight' && now > times.solarNoon;
+
+  const context: string[] = [];
+  if (polar == null) {
+    if (sunUp) {
+      context.push(`Sunset ${t(times.sunset)}`);
+      if (times.goldenEveningStart && now < times.goldenEveningStart) {
+        context.push(`Golden ${t(times.goldenEveningStart)}`);
+      }
+    } else {
+      if (eveningTwilight && times.civilDusk) context.push(`Dark ${t(times.civilDusk)}`);
+      if (nextTimes?.civilDawn) context.push(`Dawn ${t(nextTimes.civilDawn)}`);
+      if (nextTimes?.goldenMorningEnd) context.push(`Golden till ${t(nextTimes.goldenMorningEnd)}`);
+    }
+  }
 
   return (
     <div className={styles.tile}>
@@ -55,6 +79,7 @@ export function DaylightTile({
         )}
       </svg>
       <div className={styles.dlBody}>
+        <div className={styles.dlPhase}>{PHASE_LABEL[phase]}</div>
         {polar === 'day' && (
           <>
             <div className={styles.dlRemaining}>Sun up all day</div>
@@ -69,25 +94,18 @@ export function DaylightTile({
         )}
         {polar == null && (
           <>
-            {daylight.daylightRemainingMin != null ? (
-              <>
-                <div className={styles.dlTimes}>
-                  ↑ {t(times.sunrise)} · ↓ {t(times.sunset)}
-                </div>
-                <div className={styles.dlRemaining}>{fmtDuration(daylight.daylightRemainingMin)} left</div>
-              </>
+            {sunUp ? (
+              <div className={styles.dlRemaining}>
+                {fmtDuration(daylight.daylightRemainingMin!)} left
+              </div>
             ) : (
-              // Sun below the horizon: the next sunrise is the one fact that matters.
               <div className={styles.dlRemaining}>
                 {daylight.nextSunrise ? `Sunrise ${t(daylight.nextSunrise)}` : '—'}
               </div>
             )}
-            {phase !== 'night' && times.goldenEveningStart && (
-              <div className={styles.sub}>Golden {t(times.goldenEveningStart)}</div>
-            )}
+            {context.length > 0 && <div className={styles.sub}>{context.join(' · ')}</div>}
           </>
         )}
-        <div className={styles.sub}>{PHASE_LABEL[phase]}</div>
       </div>
     </div>
   );

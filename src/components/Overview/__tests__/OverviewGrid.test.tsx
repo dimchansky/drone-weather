@@ -3,13 +3,14 @@ import { render } from '@testing-library/react';
 import { OverviewGrid } from '../OverviewGrid';
 import { assembleBrief, type StationRef } from '../../../domain/brief';
 import { daylight } from '../../../domain/sun';
+import { summarizeForecast } from '../../../domain/forecast';
 import { parseMetar } from '../../../domain/metar';
 import { useSettingsStore } from '../../../store/settingsStore';
 
 const NOW = new Date('2026-06-28T13:00:00Z'); // midsummer midday UTC — sun up over Vilnius
 const NIGHT = new Date('2026-06-28T23:30:00Z'); // sun down even at 54.6°N in June
 const VILNIUS = { lat: 54.6, lon: 25.28 };
-const station: StationRef = { icao: 'EYVI', name: 'Vilnius Intl Arpt, LT', coord: VILNIUS, distanceKm: 5, bearingDeg: 90 };
+const station: StationRef = { icao: 'EYVI', name: 'Vilnius Intl, VL, LT', coord: VILNIUS, distanceKm: 5, bearingDeg: 90 };
 
 const brief = (raw: string, now = NOW) =>
   assembleBrief({
@@ -21,6 +22,9 @@ const brief = (raw: string, now = NOW) =>
     now,
   });
 
+const grid = (b: ReturnType<typeof brief>, now = NOW, forecast = null as Parameters<typeof OverviewGrid>[0]['forecast']) =>
+  render(<OverviewGrid brief={b} daylight={daylight(now, VILNIUS)} forecast={forecast} now={now} />);
+
 describe('OverviewGrid', () => {
   beforeEach(() => {
     useSettingsStore.setState({ windUnit: 'ms' });
@@ -28,51 +32,73 @@ describe('OverviewGrid', () => {
 
   it('renders all four tiles from a sample brief', () => {
     const b = brief('EYVI 281250Z 13004KT 090V150 9999 SCT030 20/18 Q1015');
-    render(<OverviewGrid brief={b} daylight={daylight(NOW, VILNIUS)} now={NOW} />);
+    grid(b);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('Now');
     expect(txt).toContain('Temp & moisture');
     expect(txt).toContain('Wind');
     expect(txt).toContain('Daylight');
-    // Current weather: SCT by day → partly cloudy, 20°C.
+    // Current weather: SCT by day → partly cloudy, 20°C, plus the precip insight line.
     expect(txt).toContain('Partly cloudy');
     expect(txt).toContain('20');
-    // Thermo: RH from 20/18 ≈ 88%, dew point + spread shown.
-    expect(txt).toMatch(/8[78]% humidity/);
-    expect(txt).toContain('Dew 18°C');
-    expect(txt).toContain('Δ 2°C');
-    // Wind: 4 kt ≈ 2.1 m/s from 130° SE, variable sector compact.
+    expect(txt).toContain('No rain now');
+    // Thermo: RH from 20/18 ≈ 88%, dew point + spread + moisture status.
+    expect(txt).toMatch(/8[78]%/);
+    expect(txt).toContain('Dew 18°C · Δ 2°C');
+    expect(txt).toContain('Some moisture');
+    // Wind: 4 kt ≈ 2.1 m/s, explicit From/Drifts bearings, variable sector chip.
     expect(txt).toContain('2.1');
     expect(txt).toContain('m/s');
-    expect(txt).toContain('from 130° SE');
-    expect(txt).toContain('var 90°–150°');
-    // Daylight: sunrise/sunset arrows + remaining time present.
-    expect(txt).toMatch(/↑ \d{2}:\d{2} · ↓ \d{2}:\d{2}/);
+    expect(txt).toContain('From 130° SE');
+    expect(txt).toContain('Drifts 310° NW');
+    expect(txt).toContain('Var 90–150°');
+    // Daylight: phase + sunset + remaining time.
+    expect(txt).toContain('Daylight');
+    expect(txt).toMatch(/Sunset \d{2}:\d{2}/);
     expect(txt).toMatch(/left/);
   });
 
   it('respects the selected wind unit', () => {
     useSettingsStore.setState({ windUnit: 'kt' });
     const b = brief('EYVI 281250Z 13010KT 9999 SCT030 20/18 Q1015');
-    render(<OverviewGrid brief={b} daylight={daylight(NOW, VILNIUS)} now={NOW} />);
+    grid(b);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('10');
     expect(txt).toContain('kt');
     expect(txt).not.toContain('m/s');
   });
 
-  it('shows gusts compactly in the wind tile', () => {
+  it('shows gusts as a compact chip', () => {
     const b = brief('EYVI 281250Z 13010G20KT 9999 SCT030 20/18 Q1015');
-    render(<OverviewGrid brief={b} daylight={daylight(NOW, VILNIUS)} now={NOW} />);
-    expect(document.body.textContent).toMatch(/Gusts 10\.3 m\/s/);
+    grid(b);
+    expect(document.body.textContent).toMatch(/G 10\.3 m\/s/);
   });
 
-  it('night state: moon condition and next sunrise instead of daylight remaining', () => {
+  it('flags a small dew-point spread as dew risk', () => {
+    const b = brief('EYVI 281250Z 13004KT 9999 SCT030 20/19 Q1015');
+    grid(b);
+    expect(document.body.textContent).toContain('Dew risk');
+  });
+
+  it('shows the model rain onset as the current-weather insight', () => {
+    const b = brief('EYVI 281250Z 13004KT 9999 SCT030 20/12 Q1015');
+    const fc = summarizeForecast(NOW, [
+      { time: new Date('2026-06-28T14:00:00Z'), windKt: 8, gustKt: null, precipMm: 0.5, precipProb: 80 },
+    ]);
+    grid(b, NOW, fc);
+    const txt = document.body.textContent ?? '';
+    expect(txt).toMatch(/Rain in ~/);
+    expect(txt).not.toContain('No rain now');
+  });
+
+  it('night state: moon condition, phase, next sunrise and dawn context', () => {
     const b = brief('EYVI 282320Z 00000KT CAVOK 14/12 Q1016', NIGHT);
-    render(<OverviewGrid brief={b} daylight={daylight(NIGHT, VILNIUS)} now={NIGHT} />);
+    grid(b, NIGHT);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('Clear night');
+    expect(txt).toContain('Night');
     expect(txt).toMatch(/Sunrise \d{2}:\d{2}/);
+    expect(txt).toMatch(/Dawn \d{2}:\d{2}/);
     expect(txt).not.toMatch(/left/);
   });
 
@@ -88,7 +114,7 @@ describe('OverviewGrid', () => {
       },
       now: NOW,
     });
-    render(<OverviewGrid brief={b} daylight={daylight(NOW, VILNIUS)} now={NOW} />);
+    grid(b);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('model');
     expect(txt).toContain('Rain likely');
@@ -96,7 +122,7 @@ describe('OverviewGrid', () => {
 
   it('renders dashes gracefully when temperature is missing', () => {
     const b = brief('EYVI 281250Z 13004KT 9999 SCT030 Q1015');
-    render(<OverviewGrid brief={b} daylight={daylight(NOW, VILNIUS)} now={NOW} />);
+    grid(b);
     expect(document.body.textContent).toContain('—');
   });
 });
