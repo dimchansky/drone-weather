@@ -8,7 +8,7 @@ export function ThermoCard({ metar }: { metar: Metar }) {
   const { tempC, dewpC } = metar;
   if (tempC == null) {
     return (
-      <Card title="Temperature & moisture">
+      <Card title="Temperature & moisture" collapsible defaultOpen={false}>
         <p className={styles.muted}>Temperature not reported.</p>
       </Card>
     );
@@ -26,7 +26,7 @@ export function ThermoCard({ metar }: { metar: Metar }) {
           : 'Small spread — air near saturation; higher fog/cloud/moisture risk.';
 
   return (
-    <Card title="Temperature & moisture">
+    <Card title="Temperature & moisture" collapsible defaultOpen={false}>
       <dl className={styles.grid}>
         <div>
           <dt>Temperature</dt>
@@ -46,7 +46,6 @@ export function ThermoCard({ metar }: { metar: Metar }) {
         </div>
       </dl>
       <p className={styles.interp}>{interp}</p>
-      {metar.qnhHpa != null && <p className={styles.qnh}>QNH {metar.qnhHpa} hPa</p>}
     </Card>
   );
 }

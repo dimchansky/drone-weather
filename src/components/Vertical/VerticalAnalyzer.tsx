@@ -58,6 +58,8 @@ export function VerticalAnalyzer({ brief }: { brief: Brief }) {
   return (
     <Card
       title="Vertical hazard analyzer"
+      collapsible
+      defaultOpen={false}
       right={
         <button className={styles.toggle} onClick={() => setFull((f) => !f)}>
           {full ? `0–${fmtAlt(150, altUnit)}` : `0–${fmtAlt(1000, altUnit)}`}

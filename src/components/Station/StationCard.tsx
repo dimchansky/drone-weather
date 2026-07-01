@@ -16,7 +16,7 @@ export function StationCard({ brief, now }: { brief: Brief; now: Date }) {
 
   if (brief.source === 'model' || !brief.station) {
     return (
-      <Card title="Station">
+      <Card title="Station" collapsible defaultOpen={false}>
         <p className={styles.warn}>
           No nearby METAR station found. Showing <strong>forecast model</strong> data for your
           location — treat it as an approximation.
@@ -33,7 +33,7 @@ export function StationCard({ brief, now }: { brief: Brief; now: Date }) {
   const stale = age > 120;
 
   return (
-    <Card title="Station">
+    <Card title="Station" collapsible defaultOpen={false}>
       <div className={styles.headline}>
         <span className={styles.icao}>{st.icao}</span>
         {st.name && <span className={styles.name}>{st.name}</span>}

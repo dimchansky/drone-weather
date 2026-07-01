@@ -4,15 +4,21 @@ import { useBriefLoader } from './hooks/useBriefLoader';
 import { useNow } from './hooks/useNow';
 import { assessRisk } from './domain/risk';
 import { icingBand } from './domain/icing';
+import { precipNow } from './domain/precip';
+import { opsBandHazard } from './domain/vertical';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
 import { LocationBar } from './components/Location/LocationBar';
 import { SettingsBar } from './components/SettingsBar/SettingsBar';
-import { RiskSummary } from './components/Risk/RiskSummary';
+import { DecisionBanner } from './components/Risk/DecisionBanner';
+import { RiskFactors } from './components/Risk/RiskFactors';
+import { StatusStrip } from './components/Status/StatusStrip';
+import { PrecipNowPill } from './components/Precip/PrecipNowPill';
 import { WindCompass } from './components/Wind/WindCompass';
 import { StationCard } from './components/Station/StationCard';
 import { VerticalAnalyzer } from './components/Vertical/VerticalAnalyzer';
+import { VerticalHazardStrip } from './components/Vertical/VerticalHazardStrip';
 import { CloudsCard } from './components/Clouds/CloudsCard';
 import { ThermoCard } from './components/Thermo/ThermoCard';
 import { RawData } from './components/Raw/RawData';
@@ -90,16 +96,28 @@ export function App() {
               <div className={styles.banner}>Couldn’t refresh ({error}); showing last data.</div>
             )}
 
-            <RiskSummary
-              risk={liveRisk ?? brief.risk}
-              observedAt={brief.metar.observedAt}
-              sourceMode={brief.source}
+            {/* Layer 1 — the decision */}
+            <DecisionBanner risk={liveRisk ?? brief.risk} wind={brief.metar.wind} />
+
+            {/* Layer 2 — decision support (compact, always visible) */}
+            <StatusStrip brief={brief} now={now} />
+            <PrecipNowPill precip={precipNow(brief.metar, brief.model)} />
+            <RiskFactors risk={liveRisk ?? brief.risk} />
+            <VerticalHazardStrip
+              hazard={opsBandHazard(
+                brief.icing.levels,
+                brief.cloudBase.baseM,
+                brief.opsCeilingM,
+                altUnit,
+              )}
             />
             <WindCompass wind={brief.metar.wind} />
-            <StationCard brief={brief} now={now} />
+
+            {/* Layer 3 — technical detail (collapsed by default) */}
             <VerticalAnalyzer brief={brief} />
             <CloudsCard brief={brief} />
             <ThermoCard metar={brief.metar} />
+            <StationCard brief={brief} now={now} />
             <RawData brief={brief} />
           </>
         )}

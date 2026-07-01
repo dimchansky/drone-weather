@@ -17,6 +17,8 @@ export function RawData({ brief }: { brief: Brief }) {
   return (
     <Card
       title="Raw data"
+      collapsible
+      defaultOpen={false}
       right={
         <button className={styles.copy} onClick={copy}>
           {copied ? 'Copied' : 'Copy'}

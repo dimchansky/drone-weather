@@ -22,3 +22,38 @@
   text-transform: uppercase;
   color: var(--text-dim);
 }
+
+/* Collapsible header: the title becomes a tap-to-toggle button (kept out of the `right` slot,
+   so a Copy button placed there never toggles the panel). */
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  margin: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+}
+
+.chevron {
+  display: inline-block;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--text-dim);
+  transition: transform 0.15s ease;
+}
+
+.trigger[data-state='open'] .chevron {
+  transform: rotate(90deg);
+}
+
+/* forceMount keeps the content in the DOM; hide it visually when collapsed. */
+.content[data-state='closed'] {
+  display: none;
+}

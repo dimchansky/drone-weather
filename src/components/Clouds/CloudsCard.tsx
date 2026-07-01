@@ -44,7 +44,7 @@ export function CloudsCard({ brief }: { brief: Brief }) {
   const ceil = ceilingFt(metar.clouds);
 
   return (
-    <Card title="Cloud & ceiling">
+    <Card title="Cloud & ceiling" collapsible defaultOpen={false}>
       {metar.cavok && (
         <p className={styles.cavok}>CAVOK — no significant cloud below {fmtAltFt(5000, altUnit)} AGL.</p>
       )}
