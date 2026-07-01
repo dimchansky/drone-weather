@@ -14,13 +14,13 @@ const brief = assembleBrief({
   now: NOW,
 });
 
-const WEATHER = ['wind', 'gust', 'visibility', 'moisture', 'ceiling', 'icing'];
+const WEATHER = ['wind', 'gust', 'visibility', 'precip', 'moisture', 'ceiling', 'icing'];
 
 describe('RiskFactors', () => {
-  it('shows the six weather factors, each with its reason (never a black box)', () => {
+  it('shows the seven weather factors, each with its reason (never a black box)', () => {
     render(<RiskFactors risk={brief.risk} />);
     const weather = brief.risk.components.filter((c) => WEATHER.includes(c.key));
-    expect(weather).toHaveLength(6);
+    expect(weather).toHaveLength(7);
     for (const c of weather) {
       expect(screen.getByText(c.label)).toBeInTheDocument();
       expect(screen.getByText(c.reason)).toBeInTheDocument();

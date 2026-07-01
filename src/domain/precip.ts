@@ -14,8 +14,8 @@ export interface PrecipNow {
   source: 'metar' | 'model' | 'none';
 }
 
-/** Name the observed precipitation type for a friendlier, still-accurate label. */
-function precipLabel(metar: Metar): string {
+/** Name the observed precipitation type for a friendlier, still-accurate label (shared with precipRisk). */
+export function precipTypeLabel(metar: Metar): string {
   const codes = metar.weather.flatMap((w) => w.phenomena);
   if (codes.includes('SN')) return 'snow';
   if (codes.includes('DZ')) return 'drizzle';
@@ -28,7 +28,7 @@ export function precipNow(metar: Metar, model: ModelConditions | null): PrecipNo
   // Observed (METAR) wins — it is ground truth for "now".
   if (hasThunderstorm(metar)) return { raining: true, text: 'METAR: thunderstorm', source: 'metar' };
   if (hasFreezingPrecip(metar)) return { raining: true, text: 'METAR: freezing precipitation now', source: 'metar' };
-  if (hasPrecip(metar)) return { raining: true, text: `METAR: ${precipLabel(metar)} now`, source: 'metar' };
+  if (hasPrecip(metar)) return { raining: true, text: `METAR: ${precipTypeLabel(metar)} now`, source: 'metar' };
 
   // Model fallback — always prefixed "Model:" so it never looks like an observation.
   if (model?.precipMm != null && model.precipMm >= 0.1) {

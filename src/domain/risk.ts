@@ -26,6 +26,7 @@ import {
   hasPrecip,
   hasThunderstorm,
 } from './metar';
+import { precipTypeLabel } from './precip';
 import { bumpSeverity, maxSeverity, severityRank } from './severity';
 
 export const DEFAULT_OPS_CEILING_M = 120;
@@ -106,6 +107,35 @@ export function visibilityRisk(visibilityM: number | null): RiskComponent {
   };
 }
 
+/**
+ * Precipitation as a first-class risk factor — rain/drizzle/snow, freezing precipitation, or a
+ * thunderstorm observed in the METAR, else the model amount/probability. Worst source wins; the
+ * reason names the type + source (observed METAR vs model), matching the precip-now pill. Kept
+ * SEPARATE from moisture/wetness (which now owns fog/dew/near-saturation only) to avoid
+ * double-counting: each severity source lives in exactly one component.
+ */
+export function precipRisk(metar: Metar, model?: ModelConditions | null): RiskComponent {
+  const label = 'Precipitation';
+  if (hasFreezingPrecip(metar)) {
+    return { key: 'precip', label, severity: 'NOFLY', value: 'freezing', reason: 'Freezing precipitation reported (METAR) — ice accretion and a wet airframe.' };
+  }
+  if (hasThunderstorm(metar)) {
+    return { key: 'precip', label, severity: 'NOFLY', value: 'thunderstorm', reason: 'Thunderstorm in the area (METAR).' };
+  }
+  if (hasPrecip(metar)) {
+    const type = precipTypeLabel(metar);
+    const typeCap = type.charAt(0).toUpperCase() + type.slice(1);
+    return { key: 'precip', label, severity: 'HIGH', value: type, reason: `${typeCap} reported (METAR) — the drone will get wet.` };
+  }
+  if (model?.precipMm != null && model.precipMm >= 0.1) {
+    return { key: 'precip', label, severity: 'HIGH', value: `${round(model.precipMm, 1)} mm/h`, reason: `Model: ~${round(model.precipMm, 1)} mm/h precipitation expected.` };
+  }
+  if (model?.precipProb != null && model.precipProb >= 60) {
+    return { key: 'precip', label, severity: 'CAUTION', value: `${round(model.precipProb)}%`, reason: `Model: ${round(model.precipProb)}% chance of precipitation.` };
+  }
+  return { key: 'precip', label, severity: 'GOOD', reason: 'No precipitation reported.' };
+}
+
 export interface MoistureInputs {
   model?: ModelConditions | null;
   cloudBaseM?: number | null;
@@ -136,21 +166,10 @@ export function moistureRisk(metar: Metar, opts: MoistureInputs = {}): RiskCompo
 
   const candidates: { severity: Severity; reason: string; value?: string }[] = [];
 
-  // Freezing / convective — most severe.
-  if (hasFreezingFog(metar) || hasFreezingPrecip(metar)) {
-    candidates.push({ severity: 'NOFLY', reason: 'Freezing fog/precipitation — wet airframe and severe icing hazard.', value: 'freezing' });
-  }
-  if (hasThunderstorm(metar)) {
-    candidates.push({ severity: 'NOFLY', reason: 'Thunderstorm in the area.', value: 'TS' });
-  }
-
-  // Precipitation (observed METAR, else model).
-  if (hasPrecip(metar)) {
-    candidates.push({ severity: 'HIGH', reason: 'Precipitation reported (METAR) — the drone will get wet.', value: 'precip' });
-  } else if (model?.precipMm != null && model.precipMm >= 0.1) {
-    candidates.push({ severity: 'HIGH', reason: `Model: ~${round(model.precipMm, 1)} mm/h precipitation expected.`, value: `${round(model.precipMm, 1)} mm` });
-  } else if (model?.precipProb != null && model.precipProb >= 60) {
-    candidates.push({ severity: 'CAUTION', reason: `Model: ${round(model.precipProb)}% chance of precipitation.`, value: `${round(model.precipProb)}%` });
+  // Freezing fog — wets the airframe and is a severe icing hazard. (Falling precipitation —
+  // rain/drizzle/snow, freezing precip, thunderstorm — is owned by the precipitation component.)
+  if (hasFreezingFog(metar)) {
+    candidates.push({ severity: 'NOFLY', reason: 'Freezing fog — wet airframe and severe icing hazard.', value: 'freezing fog' });
   }
 
   // Fog / mist.
@@ -336,6 +355,7 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
     windRisk(metar.wind.speedKt, metar.wind.dirDeg, windUnit),
     gustRisk(metar.wind.speedKt, metar.wind.gustKt, windUnit),
     visibilityRisk(metar.visibilityM),
+    precipRisk(metar, inputs.model),
     moistureRisk(metar, { model: inputs.model, cloudBaseM: inputs.cloudBaseM, profile: inputs.profile, opsCeilingM, altUnit, now }),
     ceilingRisk(metar, opsCeilingM, altUnit),
     icingRiskComponent(icingWorst, icingReason),
@@ -407,6 +427,9 @@ function buildAdvice(
       break;
     case 'visibility':
       clause = 'keep the drone close and within sight (VLOS)';
+      break;
+    case 'precip':
+      clause = 'precipitation is falling — a non-waterproof drone will get wet; wait for it to pass';
       break;
     case 'moisture':
       clause = 'expect a wet airframe — protect optics and electronics, or wait for drier air';

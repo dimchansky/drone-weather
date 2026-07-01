@@ -4,7 +4,7 @@ import { SeverityDot } from '../common/SeverityChip';
 import styles from './RiskFactors.module.css';
 
 /** The weather factors shown as scannable rows (freshness/distance live in the status strip). */
-const WEATHER_KEYS = new Set(['wind', 'gust', 'visibility', 'moisture', 'ceiling', 'icing']);
+const WEATHER_KEYS = new Set(['wind', 'gust', 'visibility', 'precip', 'moisture', 'ceiling', 'icing']);
 
 /**
  * Layer 2 — the priority-ordered weather risk factors, each with its own reason (never a black

@@ -3,6 +3,7 @@ import {
   windRisk,
   gustRisk,
   visibilityRisk,
+  precipRisk,
   moistureRisk,
   ceilingRisk,
   freshness,
@@ -125,10 +126,6 @@ describe('moistureRisk (moisture & wetness)', () => {
     expect(moistureRisk(m('EHAM 281200Z 21008KT 6000 09/09 Q1011')).severity).toBe('CAUTION');
   });
 
-  it('is HIGH for precipitation', () => {
-    expect(moistureRisk(m('EGLL 281200Z 24010KT 6000 -RA BKN015 12/11 Q1008')).severity).toBe('HIGH');
-  });
-
   it('is HIGH for fog', () => {
     expect(moistureRisk(m('EGLL 281200Z 02003KT 0400 FG 08/08 Q1012')).severity).toBe('HIGH');
   });
@@ -155,14 +152,6 @@ describe('moistureRisk (moisture & wetness)', () => {
     expect(r.reason).toMatch(/dew/i);
   });
 
-  it('uses model precipitation probability when METAR has no precip', () => {
-    const r = moistureRisk(m('LFPG 281200Z 27006KT CAVOK 18/06 Q1015'), {
-      model: { tempC2m: 18, dewp2m: 6, rh2m: 46, windKt: 6, precipMm: 0, precipProb: 70, cloudCoverPct: 60, cloudCoverLowPct: 30 },
-    });
-    expect(r.severity).toBe('CAUTION');
-    expect(r.reason).toMatch(/70%/);
-  });
-
   it('adds a coarse model elevated near-saturation caution (dry surface)', () => {
     const profile = modelProfile([
       { altM: 0, tempC: 20, dewpC: 8, rhPct: 46 }, // dry surface (spread 12)
@@ -183,6 +172,52 @@ describe('moistureRisk (moisture & wetness)', () => {
     const r = moistureRisk(m('EFHK 281200Z 00000KT 9999 11/11 Q1018'), { profile, opsCeilingM: 120 });
     expect(r.severity).toBe('HIGH');
     expect(r.reason).not.toMatch(/model/i); // surface-driven reason wins, not the model layer
+  });
+});
+
+describe('precipRisk (first-class precipitation factor)', () => {
+  const model = (p: Partial<import('../types').ModelConditions>) => ({
+    tempC2m: 18, dewp2m: 6, rh2m: 46, windKt: 6, precipMm: 0, precipProb: 0, cloudCoverPct: 40, cloudCoverLowPct: 10, ...p,
+  });
+
+  it('is GOOD when dry', () => {
+    expect(precipRisk(m('LFPG 281200Z 27006KT CAVOK 20/05 Q1016')).severity).toBe('GOOD');
+  });
+
+  it('is HIGH for observed rain, naming the type + METAR source', () => {
+    const r = precipRisk(m('EGLL 281200Z 24010KT 6000 -RA BKN015 12/11 Q1008'));
+    expect(r.severity).toBe('HIGH');
+    expect(r.value).toBe('rain');
+    expect(r.reason).toMatch(/Rain reported \(METAR\)/);
+  });
+
+  it('names drizzle and snow', () => {
+    expect(precipRisk(m('EGLL 281200Z 24010KT 4000 -DZ OVC004 09/09 Q1010')).value).toBe('drizzle');
+    expect(precipRisk(m('CYYZ 281200Z 30010KT 2000 -SN OVC010 M03/M05 Q1020')).value).toBe('snow');
+  });
+
+  it('is NO-FLY for freezing precipitation', () => {
+    expect(precipRisk(m('CYYZ 281200Z 09010KT 2000 -FZRA OVC004 M01/M02 Q1000')).severity).toBe('NOFLY');
+  });
+
+  it('is NO-FLY for a thunderstorm', () => {
+    expect(precipRisk(m('KMCI 281200Z 18010KT 9999 TSRA 25/20 Q1010')).severity).toBe('NOFLY');
+  });
+
+  it('uses model amount (HIGH) when the METAR is dry', () => {
+    const r = precipRisk(m('LFPG 281200Z 27006KT CAVOK 18/06 Q1015'), model({ precipMm: 0.5 }));
+    expect(r.severity).toBe('HIGH');
+    expect(r.reason).toMatch(/Model:.*mm\/h/);
+  });
+
+  it('uses model probability (CAUTION) when there is no amount', () => {
+    const r = precipRisk(m('LFPG 281200Z 27006KT CAVOK 18/06 Q1015'), model({ precipProb: 70 }));
+    expect(r.severity).toBe('CAUTION');
+    expect(r.reason).toMatch(/Model: 70% chance/);
+  });
+
+  it('is left to moisture — not precip — for freezing FOG', () => {
+    expect(precipRisk(m('BIKF 281200Z 03010KT 0300 FZFG M02/M03 Q0995')).severity).toBe('GOOD');
   });
 });
 
@@ -248,7 +283,7 @@ describe('assessRisk aggregation', () => {
     const metar = m('LFPG 281200Z 27006KT CAVOK 20/05 Q1016');
     const r = assessRisk({ metar, icingWorst: 'GOOD', icingReason: 'low', distanceKm: 5, now: NOW });
     const keys = r.components.map((c) => c.key);
-    expect(keys).toEqual(['wind', 'gust', 'visibility', 'moisture', 'ceiling', 'icing', 'freshness', 'distance']);
+    expect(keys).toEqual(['wind', 'gust', 'visibility', 'precip', 'moisture', 'ceiling', 'icing', 'freshness', 'distance']);
     expect(r.components.every((c) => c.reason.length > 0)).toBe(true);
   });
 });
@@ -357,6 +392,13 @@ describe('dominant reason + advice (decision banner)', () => {
     expect(r.uncertain).toBe(true);
     expect(r.primary?.key).toBe('wind');
     expect(r.advice).toMatch(/Reduced confidence — verify against the raw METAR/);
+  });
+
+  it('makes precipitation the main issue (with rain-specific advice) when it is the worst factor', () => {
+    const r = assessRisk({ metar: m('EDDB 281200Z 35004KT 9999 -RA NSC 21/17 Q1018'), ...base });
+    expect(r.primary?.key).toBe('precip');
+    expect(r.primary?.value).toBe('rain');
+    expect(r.advice).toMatch(/precipitation is falling|get wet/i);
   });
 
   it('ties break by priority order (wind before an equal-severity later factor)', () => {
