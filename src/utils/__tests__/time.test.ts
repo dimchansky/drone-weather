@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ageMinutes, fmtLocalTime, fmtUtcTime } from '../time';
+import { ageMinutes, fmtLocalTime, fmtUtcTime, fmtDuration } from '../time';
 
 describe('ageMinutes', () => {
   const observed = new Date('2026-06-28T12:50:00Z');
@@ -26,5 +26,14 @@ describe('fmtUtcTime', () => {
 describe('fmtLocalTime', () => {
   it('produces a zero-padded HH:MM string (zone-dependent value)', () => {
     expect(fmtLocalTime(new Date('2026-06-28T12:50:00Z'))).toMatch(/^\d{2}:\d{2}$/);
+  });
+});
+
+describe('fmtDuration', () => {
+  it('formats hours+minutes, dropping the hours when under an hour', () => {
+    expect(fmtDuration(380)).toBe('6h 20m');
+    expect(fmtDuration(45)).toBe('45m');
+    expect(fmtDuration(60)).toBe('1h 0m');
+    expect(fmtDuration(-5)).toBe('0m');
   });
 });

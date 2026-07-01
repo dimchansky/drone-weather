@@ -16,3 +16,10 @@ export function fmtLocalTime(d: Date): string {
 export function fmtUtcTime(d: Date): string {
   return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}Z`;
 }
+
+/** A duration in whole minutes as "6h 20m" / "45m" (clamped at 0). */
+export function fmtDuration(totalMin: number): string {
+  const m = Math.max(0, Math.round(totalMin));
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
+}
