@@ -1,5 +1,7 @@
 import type { TafSummary } from '../../domain/taf';
+import type { LocationTime } from '../../domain/types';
 import type { WindUnit, AltUnit } from '../../domain/units';
+import { timeSourceLabel } from '../../utils/time';
 import { InfoStrip } from '../common/InfoStrip';
 import { tafStripText } from './tafText';
 
@@ -13,18 +15,20 @@ export function TafStrip({
   summary,
   windUnit,
   altUnit,
+  locationTime,
 }: {
   summary: TafSummary;
   windUnit: WindUnit;
   altUnit: AltUnit;
+  locationTime: LocationTime;
 }) {
   if (!summary.available) return null;
   return (
     <InfoStrip
       severity={summary.severity}
-      title="TAF — airport forecast, not your exact launch point. Times in your device's local time (UTC in parentheses)."
+      title={`TAF — airport forecast, not your exact launch point. Times in ${timeSourceLabel(locationTime)} (UTC in parentheses).`}
     >
-      {tafStripText(summary, windUnit, altUnit)}
+      {tafStripText(summary, windUnit, altUnit, locationTime)}
     </InfoStrip>
   );
 }

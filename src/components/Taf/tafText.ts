@@ -4,15 +4,17 @@
 // hazards aggregated in the domain, and an explicit "+N more" instead of a bare ellipsis.
 
 import type { TafHazard, TafSummary } from '../../domain/taf';
+import type { LocationTime } from '../../domain/types';
 import { fmtWindSpeed, fmtAltFt, round, type WindUnit, type AltUnit } from '../../domain/units';
-import { fmtLocalTime, fmtUtcTime } from '../../utils/time';
+import { fmtTimeInZone, fmtUtcTime } from '../../utils/time';
 
 const MAX_SHOWN = 3;
 
-/** "11:00–13:00 (08:00–10:00 UTC)" — device-local primary, UTC secondary. */
-function timeWindow(h: TafHazard): string {
+/** "11:00–13:00 (08:00–10:00 UTC)" — flight-site local time primary, UTC secondary (TAF is native UTC). */
+function timeWindow(h: TafHazard, lt: LocationTime): string {
+  const l = (d: Date): string => fmtTimeInZone(d, lt);
   const u = (d: Date): string => fmtUtcTime(d).replace('Z', '');
-  const local = h.from && h.to ? `${fmtLocalTime(h.from)}–${fmtLocalTime(h.to)}` : h.from ? fmtLocalTime(h.from) : '';
+  const local = h.from && h.to ? `${l(h.from)}–${l(h.to)}` : h.from ? l(h.from) : '';
   const utc = h.from && h.to ? `${u(h.from)}–${u(h.to)} UTC` : h.from ? `${u(h.from)} UTC` : '';
   return local ? `${local} (${utc})` : '';
 }
@@ -37,9 +39,9 @@ function hazardNoun(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string 
 }
 
 /** A full plain-language hazard phrase, e.g. "thunderstorms possible at times 11:00–17:00 (08:00–14:00 UTC)". */
-export function hazardPhrase(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
+export function hazardPhrase(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit, lt: LocationTime): string {
   const noun = hazardNoun(h, windUnit, altUnit);
-  const win = timeWindow(h);
+  const win = timeWindow(h, lt);
 
   if (h.changeType === 'PROB' && h.probPct != null) {
     const atTimes = h.tempo ? 'at times ' : '';
@@ -58,20 +60,20 @@ export function hazardPhrase(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit)
 }
 
 /** Compact Layer-2 strip line — plain language, airport-labelled, top few hazards + explicit "+N more". */
-export function tafStripText(s: TafSummary, windUnit: WindUnit, altUnit: AltUnit): string {
+export function tafStripText(s: TafSummary, windUnit: WindUnit, altUnit: AltUnit, lt: LocationTime): string {
   const label = `TAF ${s.icao}`.trim();
   const partial = s.partial ? ' · parsed partially — check raw' : '';
   if (!s.hazards.length) {
     return `${label} · airport forecast: no significant change next ${s.horizonH} h${partial}`;
   }
-  const shown = s.hazards.slice(0, MAX_SHOWN).map((h) => hazardPhrase(h, windUnit, altUnit));
+  const shown = s.hazards.slice(0, MAX_SHOWN).map((h) => hazardPhrase(h, windUnit, altUnit, lt));
   const hidden = s.hazards.length - MAX_SHOWN;
   const more = hidden > 0 ? ` · +${hidden} more TAF hazard${hidden > 1 ? 's' : ''}` : '';
   return `${label} · airport forecast: ${shown.join(' · ')}${more}${partial}`;
 }
 
 /** Short banner note — only for a forecast thunderstorm (the most decision-relevant); null otherwise. */
-export function tafBannerNote(s: TafSummary): string | null {
+export function tafBannerNote(s: TafSummary, lt: LocationTime): string | null {
   const ts = s.hazards.find((h) => h.kind === 'thunderstorm');
-  return ts ? `TAF: ${hazardPhrase(ts, 'kt', 'ft')}` : null;
+  return ts ? `TAF: ${hazardPhrase(ts, 'kt', 'ft', lt)}` : null;
 }

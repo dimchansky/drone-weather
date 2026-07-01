@@ -85,13 +85,15 @@ export function App() {
 
   // Banner secondary lines: daylight (always) + short notes only when notable (forecast, then TAF).
   const secondary: SecondaryLine[] = [];
-  if (dl) secondary.push({ text: daylightBannerLine(dl, now), severity: daylightSeverity(dl.phase) });
+  if (dl && brief) {
+    secondary.push({ text: daylightBannerLine(dl, now, brief.locationTime), severity: daylightSeverity(dl.phase) });
+  }
   if (fc) {
     const note = forecastBannerNote(fc, windUnit);
     if (note) secondary.push({ text: note, severity: fc.severity });
   }
-  if (taf) {
-    const note = tafBannerNote(taf);
+  if (taf && brief) {
+    const note = tafBannerNote(taf, brief.locationTime);
     if (note) secondary.push({ text: note, severity: taf.severity });
   }
 
@@ -141,8 +143,8 @@ export function App() {
             <StatusStrip brief={brief} now={now} />
             <PrecipNowPill precip={precipNow(brief.metar, brief.model)} />
             {fc && <ForecastStrip forecast={fc} windUnit={windUnit} />}
-            {taf && <TafStrip summary={taf} windUnit={windUnit} altUnit={altUnit} />}
-            {dl && <DaylightStrip daylight={dl} />}
+            {taf && <TafStrip summary={taf} windUnit={windUnit} altUnit={altUnit} locationTime={brief.locationTime} />}
+            {dl && <DaylightStrip daylight={dl} locationTime={brief.locationTime} />}
             <RiskFactors risk={liveRisk ?? brief.risk} />
             <VerticalHazardStrip
               hazard={opsBandHazard(
