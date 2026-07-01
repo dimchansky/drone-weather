@@ -389,7 +389,8 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
    `ForecastStrip` → `TafStrip` → `DaylightStrip` → `RiskFactors` → `VerticalHazardStrip` →
    `WindCompass`.
 3. **Technical detail** (collapsible `Card`, collapsed by default) — `VerticalAnalyzer` →
-   `Clouds` → `ThermoMoisture` → `Station` → **Raw METAR/TAF** → disclaimer/version footer.
+   `Clouds` → `ThermoMoisture` → `Station` → `TafDetailsCard` → **Raw METAR/TAF** →
+   disclaimer/version footer.
 
 **Components:**
 - `DecisionBanner` — big status chip (GOOD/CAUTION/HIGH/NOFLY) + single **Main issue** (dominant
@@ -424,6 +425,11 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 - `Clouds` — layers (ft + m), ceiling, CAVOK note, or estimated-base note (source tagged).
 - `ThermoMoisture` — T, Td, RH, spread, with interpretation (QNH promoted to `StatusStrip`).
 - `Station` — ICAO/name, distance, bearing + compass point, METAR age, far/stale warning.
+- `TafDetailsCard` — decoded, period-by-period TAF (`components/Taf/tafDetail.ts` over `parseTaf`
+  periods): human period type (Initial forecast / From / Becoming / Temporary / N% chance),
+  local + UTC window, and unit-aware wind/gusts, visibility, plain-English weather, clouds/ceiling,
+  plus the raw group text. Airport-forecast note + partial-parse warning. A decoded helper, not the
+  source of truth — separate from `RawData`; never changes the verdict.
 - `RawData` — collapsed-by-default raw METAR + TAF (monospace, `forceMount` so it stays verbatim
   in the DOM), copy button (a header sibling of the trigger, so it never toggles the panel).
 - `Location` — GPS button, manual lat/lon entry, nearby-station picker.

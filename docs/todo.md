@@ -104,6 +104,7 @@
 - [ ] Aircraft profiles / configurable per-drone thresholds — **deprioritized (optional)**
 - [ ] Bundled offline station index (OurAirports-derived)
 - [ ] Airspace / legal module (separate, clearly delineated)
+- [x] TAF period-by-period detail card (`TafDetailsCard`, Layer 3, decoded helper)
 - [ ] Trends/history, i18n, provider fallback chain (CheckWX/AVWX via proxy)
 - [ ] Richer icing model (freezing level, supercooled-water indices)
 - [ ] Model surface pressure (labelled "Model pressure", never "QNH")

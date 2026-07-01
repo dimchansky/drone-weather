@@ -113,9 +113,15 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   Every non-raw clock time follows this rule — the `StatusStrip` (fetch/model time) and `StationCard`
   (METAR observed + fetch time) also render in the flight-site zone; the raw METAR/TAF stay verbatim.
 
+- **TAF period-by-period detail card (done 2026-07-01):** a Layer-3 collapsible `TafDetailsCard`
+  between the compact `TafStrip` and the raw TAF — one decoded section per parsed period (human
+  type, local + UTC window, unit-aware wind/gusts/visibility, plain-English weather, clouds/ceiling,
+  raw group text), with an airport-forecast note and a partial-parse warning. A decoded helper; the
+  raw TAF stays verbatim and it never changes the verdict.
+
 ### Later / optional (no near-term priority)
 
 - **Aircraft profiles** (Generic / C0 / custom) — **deprioritized** (the raw numbers + generic
   guidance are enough for now); revisit only if there's a clear need.
 - Model surface pressure (labelled "Model pressure", never "QNH"); dedicated offline station index;
-  richer icing model.
+  richer icing model; localizing the StatusStrip fetch/observed times is done.
