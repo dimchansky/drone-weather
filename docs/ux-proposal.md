@@ -1,7 +1,7 @@
 # Drone Weather — Decision-first UX proposal
 
-> Status: **Iterations 1–2 landed (2026-07-01).** Iteration 3 is planned. This doc records the
-> information architecture; the function-level contracts live in [spec.md](spec.md) (see §8).
+> Status: **Iterations 1–3 landed (2026-07-01).** This doc records the information architecture;
+> the function-level contracts live in [spec.md](spec.md) (see §8).
 
 ## Why
 
@@ -38,6 +38,9 @@ sources always labelled; the raw METAR always available verbatim.
 - `VerticalHazardStrip` — the ops-band conclusion in one line (*"Ops band 0–120 m: low vertical
   hazard · cloud base above ops ceiling"*), so the app's unique vertical signal stays visible even
   though the full chart is collapsed below.
+- `ForecastStrip` *(Iteration 3)* — short-term **model** forecast: *"Next 3h (model): wind steady ·
+  gusts to 15 kt · no rain expected"* / *"…rain likely in ~45m"*. Colored by the forecast advisory
+  (CAUTION when rain/rising wind ahead). Always labelled "model" so it never reads as observed.
 - `DaylightStrip` *(Iteration 2)* — sunrise/sunset · daylight remaining · golden-hour window, or a
   night/twilight advisory. Colored by the daylight severity (CAUTION in twilight/night, never
   NO-FLY). Times are **device-local** and the strip says so.
@@ -75,8 +78,11 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   `domain/sun.ts` (NOAA solar equations, offline, device-local time labelled as such, tz-swappable),
   a Layer-2 `DaylightStrip` + the banner secondary line. Twilight/night raise a CAUTION **advisory**
   (colored strip + banner line), never auto-NO-FLY; the weather verdict chip stays weather-only.
-- **Iteration 3:** short-term forecast (next 1–3 h) — Open-Meteo hourly look-ahead (+ `wind_gusts_10m`),
-  a pure `domain/forecast.ts` trend summary, a Layer-2 `ForecastStrip` + the reserved banner line.
-- **Future (unscheduled):** aircraft profiles (Generic / C0 / custom), true location timezone, a
-  dedicated precipitation risk component, model surface pressure (labelled "Model pressure", never
-  "QNH").
+- **Iteration 3 (done):** short-term forecast (next 1–3 h) — Open-Meteo hourly look-ahead
+  (`forecast_days=2`, + `wind_gusts_10m`), a pure `domain/forecast.ts` trend summary
+  (wind/gust trend + rain onset), a Layer-2 `ForecastStrip` + a banner note when notable. Model
+  forecast, labelled as such; the observed METAR still drives the verdict.
+- **Future (unscheduled):** aircraft profiles (Generic / C0 / custom), **true location timezone**
+  (the daylight/forecast times are device-local for now — a coordinate→IANA-tz lookup would make
+  them correct for distant sites), a dedicated precipitation risk component, model surface pressure
+  (labelled "Model pressure", never "QNH"), and TAF parsing as an alternative forecast source.

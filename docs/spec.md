@@ -386,8 +386,7 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 
 1. **Decision** — `DecisionBanner`.
 2. **Decision support** (compact strips, always visible) — `StatusStrip` → `PrecipNowPill` →
-   `DaylightStrip` → `RiskFactors` → `VerticalHazardStrip` → `WindCompass`; reserved slot for the
-   Iteration-3 forecast strip.
+   `ForecastStrip` → `DaylightStrip` → `RiskFactors` → `VerticalHazardStrip` → `WindCompass`.
 3. **Technical detail** (collapsible `Card`, collapsed by default) — `VerticalAnalyzer` →
    `Clouds` → `ThermoMoisture` → `Station` → **Raw METAR/TAF** → disclaimer/version footer.
 
@@ -403,6 +402,10 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
   "METAR: …" / "Model: …". Model probability never rendered as observed.
 - `VerticalHazardStrip` — one-line ops-band conclusion (`opsBandHazard`): worst icing in the band
   + cloud-base-vs-ops. Keeps the vertical signal visible while the full chart is collapsed.
+- `DaylightStrip` — sunrise/sunset · daylight remaining · golden hour (`domain/sun.ts`), or a
+  night/twilight CAUTION advisory. Device-local times (labelled); never auto-NO-FLY.
+- `ForecastStrip` — short-term 1–3 h model forecast (`domain/forecast.ts` over the Open-Meteo
+  hourly window): wind/gust trend + rain onset. Labelled "model"; CAUTION when notable.
 - `WindCompass` — SVG compass: **source arrow** + **drift arrow** (opposite) + variable arc;
   speed in all three units; gust; `routeAdvice` (shared with the banner).
 - `VerticalAnalyzer` — SVG chart: altitude axis (focus 0–120 m, toggle to 1000 m),
