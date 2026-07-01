@@ -138,3 +138,19 @@ describe('parser hardening B2 — directional visibility', () => {
     expect(r.warnings).not.toContain('4000E');
   });
 });
+
+// --- B3: INTER (intermittent) modelled as a TEMPO-like period instead of dumped to warnings ---
+describe('parser hardening B3 — INTER treated as TEMPO-like', () => {
+  it('creates a TEMPO period for INTER, with fields parsed and INTER kept in the raw group', () => {
+    const r = t('TAF YSSY 011100Z 0112/0218 27015KT 9999 SCT030 INTER 0112/0116 4000 SHRA BKN012');
+    expect(r.periods.map((p) => p.changeType)).toEqual(['BASE', 'TEMPO']);
+    const inter = r.periods[1];
+    expect(inter.tempo).toBe(true);
+    expect(inter.from).toEqual(new Date('2026-07-01T12:00:00Z'));
+    expect(inter.to).toEqual(new Date('2026-07-01T16:00:00Z'));
+    expect(inter.visibilityM).toBe(4000);
+    expect(inter.weather.map((w) => w.raw)).toContain('SHRA');
+    expect(inter.raw.startsWith('INTER 0112/0116')).toBe(true); // origin preserved
+    expect(r.warnings).not.toContain('INTER');
+  });
+});

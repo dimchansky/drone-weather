@@ -3,7 +3,8 @@
 // throw: unsupported or unknown tokens (WS, TX/TN, turbulence/icing groups, junk) are recorded in
 // `warnings` so the UI can flag a partial parse and point the pilot at the verbatim raw TAF.
 //
-// Scope (MVP): BASE, FM, BECMG, TEMPO, PROB / PROB TEMPO; wind + gusts, visibility, weather,
+// Scope (MVP): BASE, FM, BECMG, TEMPO, PROB / PROB TEMPO; INTER (intermittent) is treated as
+// TEMPO-like (its origin stays visible in the group's raw text); wind + gusts, visibility, weather,
 // clouds/ceiling, CAVOK. Times are UTC (aviation convention). Out of scope: temps (TX/TN), wind
 // shear (WS), turbulence/icing groups — all flow into `warnings`.
 
@@ -145,7 +146,9 @@ export function parseTaf(raw: string, opts: ParseTafOptions = {}): ParsedTaf {
       rawParts.push(tok);
       continue;
     }
-    if (tok === 'BECMG' || tok === 'TEMPO') {
+    // INTER (intermittent, chiefly Australian) is a temporary fluctuation like TEMPO — map it to a
+    // TEMPO period; the raw group text keeps "INTER" so its origin stays visible.
+    if (tok === 'BECMG' || tok === 'TEMPO' || tok === 'INTER') {
       const pm = tokens[i + 1]?.match(PERIOD_RE);
       open(
         emptyPeriod(
@@ -154,7 +157,7 @@ export function parseTaf(raw: string, opts: ParseTafOptions = {}): ParsedTaf {
           pm ? ddhh(pm[2], ref) : null,
         ),
       );
-      if (tok === 'TEMPO') current.tempo = true;
+      if (tok === 'TEMPO' || tok === 'INTER') current.tempo = true;
       rawParts.push(tok);
       if (pm) rawParts.push(tokens[++i]);
       continue;
