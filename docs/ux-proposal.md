@@ -49,7 +49,8 @@ sources always labelled; the raw METAR always available verbatim.
   from the model `ForecastStrip`; the raw TAF stays verbatim in the Raw card.
 - `DaylightStrip` *(Iteration 2)* — sunrise/sunset · daylight remaining · golden-hour window, or a
   night/twilight advisory. Colored by the daylight severity (CAUTION in twilight/night, never
-  NO-FLY). Times are **device-local** and the strip says so.
+  NO-FLY). Times are in the **flight-site local time** (Open-Meteo `LocationTime`, device-local
+  fallback) and the strip names the zone.
 - `WindCompass` — the wind visualization + route advice.
 
 **Layer 3 — Technical detail** (collapsible `Card`, collapsed by default; one tap to open)
@@ -103,13 +104,14 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   for thunderstorms. Kept **separate** from the Open-Meteo point forecast — both shown,
   source-labelled; TAF never changes the observed-weather verdict.
 
-### Next up (prioritized)
+- **True location timezone (done 2026-07-01):** the flight-site timezone comes from Open-Meteo
+  (`timezone=auto` → `utc_offset_seconds` + IANA name), stored on the Brief as `LocationTime` (no
+  bundled tz dataset, no new dependency). Daylight and TAF-local windows now display in the **site's
+  local time** with the zone named (e.g. "times America/Chicago"); TAF keeps UTC as the secondary.
+  Graceful **device-local fallback** when the model timezone is unavailable (labelled "device local
+  time"). The Open-Meteo forecast strip shows only relative durations, so it needed no change.
 
-1. **True location timezone** *(next)* — a coordinate→IANA-tz lookup so daylight/forecast times are
-   correct for distant sites (they render **device-local** today, clearly labelled; fine near the
-   flight site, which is the primary use case). TAF times are UTC (`Z`), so unaffected.
-
-### Later / optional
+### Later / optional (no near-term priority)
 
 - **Aircraft profiles** (Generic / C0 / custom) — **deprioritized** (the raw numbers + generic
   guidance are enough for now); revisit only if there's a clear need.

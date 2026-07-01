@@ -406,7 +406,8 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 - `VerticalHazardStrip` — one-line ops-band conclusion (`opsBandHazard`): worst icing in the band
   + cloud-base-vs-ops. Keeps the vertical signal visible while the full chart is collapsed.
 - `DaylightStrip` — sunrise/sunset · daylight remaining · golden hour (`domain/sun.ts`), or a
-  night/twilight CAUTION advisory. Device-local times (labelled); never auto-NO-FLY.
+  night/twilight CAUTION advisory. Times in the **flight-site local zone** (`LocationTime` from
+  Open-Meteo `timezone=auto`; device-local fallback), zone named; never auto-NO-FLY.
 - `ForecastStrip` — short-term 1–3 h model forecast (`domain/forecast.ts` over the Open-Meteo
   hourly window): wind/gust trend + rain onset. Labelled "model"; CAUTION when notable.
 - `TafStrip` — aviation TAF near-term hazards (`domain/taf.ts` `parseTaf` + `summarizeTaf`):

@@ -96,8 +96,9 @@
 - [x] **TAF parsing** — pure `domain/taf.ts` (BASE/FM/BECMG/TEMPO/PROB + wind/gusts/vis/weather/
       clouds, `warnings` partial-parse); `summarizeTaf` near-term hazards → Layer-2 `TafStrip`
       (airport forecast, UTC, CAUTION-cap advisory) + TS banner note; separate from Open-Meteo.
-- [ ] **1. True location timezone** — coordinate→IANA-tz lookup (daylight/forecast times are
-      device-local today, labelled; TAF times are UTC/Z).
+- [x] **True location timezone** — Open-Meteo `timezone=auto` → `LocationTime` on the Brief;
+      daylight + TAF-local windows shown in the flight-site zone (UTC secondary for TAF); device
+      fallback. No bundled tz dataset.
 
 ## Backlog / later (see idea doc §13)
 - [ ] Aircraft profiles / configurable per-drone thresholds — **deprioritized (optional)**
