@@ -14,6 +14,7 @@ import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
 import { LocationBar } from './components/Location/LocationBar';
 import { SettingsBar } from './components/SettingsBar/SettingsBar';
+import { OverviewGrid } from './components/Overview/OverviewGrid';
 import { DecisionBanner } from './components/Risk/DecisionBanner';
 import { RiskFactors } from './components/Risk/RiskFactors';
 import { StatusStrip } from './components/Status/StatusStrip';
@@ -137,6 +138,9 @@ export function App() {
             {error && (
               <div className={styles.banner}>Couldn’t refresh ({error}); showing last data.</div>
             )}
+
+            {/* Visual dashboard — the plain "what's the weather" answer; decision layers follow */}
+            {dl && <OverviewGrid brief={brief} daylight={dl} now={now} />}
 
             {/* Layer 1 — the decision */}
             <DecisionBanner risk={liveRisk ?? brief.risk} wind={brief.metar.wind} secondary={secondary} />

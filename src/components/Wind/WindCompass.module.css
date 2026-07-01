@@ -1,3 +1,5 @@
+/* SVG part colors live in CompassSvg.module.css (shared with the dashboard Wind tile). */
+
 .layout {
   display: flex;
   gap: 18px;
@@ -9,56 +11,6 @@
   width: 150px;
   height: 150px;
   flex: 0 0 auto;
-}
-
-.ring {
-  fill: var(--surface-2);
-  stroke: var(--border);
-  stroke-width: 2;
-}
-
-.tick {
-  stroke: var(--border);
-  stroke-width: 2;
-}
-
-.card {
-  fill: var(--text-dim);
-  font-size: 13px;
-  font-weight: 700;
-  text-anchor: middle;
-}
-
-.arrow {
-  stroke: var(--accent-sky);
-  stroke-width: 6;
-  stroke-linecap: round;
-}
-
-.headFill {
-  fill: var(--accent-sky);
-}
-
-.srcDot {
-  fill: var(--text-dim);
-}
-
-.center {
-  fill: var(--text);
-}
-
-.varArc {
-  fill: none;
-  stroke: var(--caution);
-  stroke-width: 5;
-  stroke-linecap: round;
-  opacity: 0.8;
-}
-
-.calm {
-  fill: var(--text);
-  font-size: 18px;
-  font-weight: 700;
 }
 
 .facts {

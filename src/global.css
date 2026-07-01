@@ -11,6 +11,9 @@
   --caution: #c98a00;
   --high: #d2641a;
   --nofly: #c5283d;
+  /* weather-illustration hues (dashboard icons/sun arc) — not severities */
+  --sun: #e8a13a;
+  --moon: #64748b;
   --radius: 14px;
   --maxw: 720px;
 
@@ -32,6 +35,8 @@
   --caution: #e0a82e;
   --high: #f08a3c;
   --nofly: #f0556b;
+  --sun: #f6c453;
+  --moon: #a5b4cd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -48,6 +53,8 @@
     --caution: #e0a82e;
     --high: #f08a3c;
     --nofly: #f0556b;
+    --sun: #f6c453;
+    --moon: #a5b4cd;
   }
 }
 

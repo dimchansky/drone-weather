@@ -1,0 +1,47 @@
+.icon {
+  display: block;
+  flex: 0 0 auto;
+}
+
+/* Base stroke style; part classes below override color/fill (selectors carry .icon so they
+   outweigh this base rule). */
+.icon path,
+.icon circle {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon .sun {
+  stroke: var(--sun);
+}
+
+.icon .moon {
+  stroke: var(--moon);
+  fill: var(--moon);
+  fill-opacity: 0.15;
+}
+
+.icon .cloud {
+  stroke: var(--text-dim);
+  fill: var(--surface-2);
+}
+
+.icon .drop {
+  stroke: var(--accent-sky);
+}
+
+.icon .flake {
+  stroke: var(--accent-sky);
+  stroke-width: 2.4;
+}
+
+.icon .bolt {
+  stroke: var(--caution);
+}
+
+.icon .fogLine {
+  stroke: var(--text-dim);
+  opacity: 0.7;
+}

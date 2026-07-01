@@ -1,0 +1,224 @@
+/* Visual dashboard: four compact squarish tiles. 2×2 by default (mobile-first); a single row of
+   four only on wide desktop where each tile keeps roughly its mobile size, so the compass stays
+   as clear as on a phone. */
+
+/* minmax(0, 1fr): aspect-ratio tiles transfer their content-height minimum into a min WIDTH;
+   an auto track minimum would let that blow the grid out horizontally. Clamped to 0, a tile
+   that needs more room than a square grows downward instead. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 700px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  /* Squarish by preference; content may still grow the tile (an explicit min-height would
+     replace the grid item's automatic content-based minimum and cause overflow instead). */
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.tileTitle {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.big {
+  font-size: 1.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.bigUnit {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.sub {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+/* --- Current weather tile --- */
+
+.cwBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
+}
+
+.cwCondition {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* --- Temperature & moisture tile --- */
+
+.thermoBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.humidity {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-sky);
+  line-height: 1.1;
+}
+
+.humidityLabel {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.thermoRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --- Wind tile --- */
+
+.windBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.compass {
+  width: 96px;
+  height: 96px;
+}
+
+.speedRow {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  justify-content: center;
+}
+
+.windFrom {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.gust {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--high);
+}
+
+.varNote {
+  font-size: 0.78rem;
+  color: var(--caution);
+}
+
+/* --- Daylight tile --- */
+
+.arc {
+  width: 100%;
+  max-width: 150px;
+  margin: 0 auto;
+  display: block;
+}
+
+.arcTrack {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.arcProgress {
+  fill: none;
+  stroke: var(--sun);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.arcSun {
+  fill: var(--sun);
+}
+
+.arcHorizon {
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.arcMoon {
+  stroke: var(--moon);
+  stroke-width: 1.6;
+  fill: var(--moon);
+  fill-opacity: 0.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dlBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.dlTimes {
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dlRemaining {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
