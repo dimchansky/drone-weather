@@ -84,10 +84,23 @@
 - [x] METAR observed time + live-updating age; locale comma-decimal input
 - [x] Defensive empty/204 response handling (model fallback for station-less sites)
 
+## Decision-first roadmap (post v0.1) — see [ux-proposal.md](ux-proposal.md)
+- [x] Iteration 1 — decision-first 3-layer dashboard (banner + strips + collapsible detail)
+- [x] Iteration 2 — daylight / sunrise-sunset / civil twilight / golden hour (`domain/sun.ts`)
+- [x] Iteration 3 — short-term 1–3 h forecast (`domain/forecast.ts` + ForecastStrip)
+
+### Next up (prioritized 2026-07-01)
+- [ ] **1. Dedicated precipitation risk** — first-class rain/drizzle/snow risk factor (own
+      `RiskFactors` row + verdict contribution); split `precipRisk` out of `moistureRisk`
+      (no double-count); integrate with `PrecipNowPill` + forecast; source-labelled.
+- [ ] **2. TAF parsing** — decode raw TAF (change groups, TEMPO/BECMG/PROB) as a longer-range source.
+- [ ] **3. True location timezone** — coordinate→IANA-tz lookup (daylight/forecast times are
+      device-local today, labelled).
+
 ## Backlog / later (see idea doc §13)
-- [ ] Configurable per-drone thresholds
+- [ ] Aircraft profiles / configurable per-drone thresholds — **deprioritized (optional)**
 - [ ] Bundled offline station index (OurAirports-derived)
-- [ ] TAF-aware "fly later?" window suggestion
 - [ ] Airspace / legal module (separate, clearly delineated)
 - [ ] Trends/history, i18n, provider fallback chain (CheckWX/AVWX via proxy)
 - [ ] Richer icing model (freezing level, supercooled-water indices)
+- [ ] Model surface pressure (labelled "Model pressure", never "QNH")

@@ -82,7 +82,24 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   (`forecast_days=2`, + `wind_gusts_10m`), a pure `domain/forecast.ts` trend summary
   (wind/gust trend + rain onset), a Layer-2 `ForecastStrip` + a banner note when notable. Model
   forecast, labelled as such; the observed METAR still drives the verdict.
-- **Future (unscheduled):** aircraft profiles (Generic / C0 / custom), **true location timezone**
-  (the daylight/forecast times are device-local for now — a coordinate→IANA-tz lookup would make
-  them correct for distant sites), a dedicated precipitation risk component, model surface pressure
-  (labelled "Model pressure", never "QNH"), and TAF parsing as an alternative forecast source.
+
+### Next up (prioritized)
+
+1. **Dedicated precipitation risk** *(next)* — make rain/drizzle/snow a **first-class risk factor**
+   with its own `RiskFactors` row and its own contribution to the verdict, rather than only being
+   folded into "Moisture & wetness" or shown as the precip-now pill. Split a `precipRisk` component
+   out of `moistureRisk` (moisture then covers fog/dew/near-saturation only, no double-count); keep
+   it integrated with the existing `PrecipNowPill` and the forecast so precipitation is an obvious,
+   standalone decision factor. Source-labelled (observed METAR vs model).
+2. **TAF parsing** — decode the raw TAF (change groups, TEMPO/BECMG/PROB) as a richer, longer-range
+   forecast source that complements the Open-Meteo hourly trend.
+3. **True location timezone** — a coordinate→IANA-tz lookup so daylight/forecast times are correct
+   for distant sites (they render **device-local** today, clearly labelled; fine near the flight
+   site, which is the primary use case).
+
+### Later / optional
+
+- **Aircraft profiles** (Generic / C0 / custom) — **deprioritized** (the raw numbers + generic
+  guidance are enough for now); revisit only if there's a clear need.
+- Model surface pressure (labelled "Model pressure", never "QNH"); dedicated offline station index;
+  richer icing model.
