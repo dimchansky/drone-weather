@@ -88,6 +88,15 @@ export interface VerticalProfile {
   note: string;
 }
 
+/** One hour of the short-term model forecast look-ahead window (Open-Meteo). */
+export interface ForecastHour {
+  time: Date;
+  windKt: number | null;
+  gustKt: number | null;
+  precipMm: number | null;
+  precipProb: number | null; // %
+}
+
 /** Surface-level model (Open-Meteo) conditions used for moisture/wetness risk. */
 export interface ModelConditions {
   tempC2m: number | null;

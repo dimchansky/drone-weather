@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseProfile, getProfile, getSurfaceFallback, parseModelConditions } from '../openMeteo';
+import {
+  parseProfile,
+  getProfile,
+  getSurfaceFallback,
+  parseModelConditions,
+  parseForecastWindow,
+} from '../openMeteo';
 import fixture from './fixtures/openmeteo-profile.json';
 
 const NOON = new Date('2026-06-28T12:00:00Z'); // matches fixture time[12]
@@ -82,5 +88,30 @@ describe('parseModelConditions', () => {
 
   it('returns all-null for empty/undefined data', () => {
     expect(parseModelConditions(undefined, NOON).precipMm).toBeNull();
+  });
+});
+
+describe('parseForecastWindow', () => {
+  const data = {
+    hourly: {
+      time: ['2026-06-28T11:00', '2026-06-28T12:00', '2026-06-28T13:00', '2026-06-28T14:00', '2026-06-28T15:00'],
+      wind_speed_10m: [7, 8, 12, 16, 18],
+      wind_gusts_10m: [12, 14, 20, 26, 30],
+      precipitation: [0, 0, 0, 0.3, 0.6],
+      precipitation_probability: [10, 20, 40, 70, 80],
+    },
+  };
+
+  it('returns the nearest hour + the next 3, including gusts', () => {
+    const w = parseForecastWindow(data, NOON); // nearest = 12:00 (index 1)
+    expect(w).toHaveLength(4);
+    expect(w[0].time.toISOString()).toBe('2026-06-28T12:00:00.000Z');
+    expect(w[0].windKt).toBe(8);
+    expect(w[0].gustKt).toBe(14);
+    expect(w[3].precipProb).toBe(80);
+  });
+
+  it('is empty for an undefined response', () => {
+    expect(parseForecastWindow(undefined, NOON)).toEqual([]);
   });
 });

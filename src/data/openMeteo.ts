@@ -2,7 +2,7 @@
 // profile from pressure-level data, plus a surface fallback when no METAR is nearby.
 // See docs/spec.md §6.3.
 
-import type { Coord, ModelConditions, ProfileLevel } from '../domain/types';
+import type { Coord, ForecastHour, ModelConditions, ProfileLevel } from '../domain/types';
 import { dewPointFromRH } from '../domain/humidity';
 import { cachedFetchJson } from './cache';
 
@@ -19,6 +19,7 @@ const SURFACE_VARS = [
   'dew_point_2m',
   'wind_speed_10m',
   'wind_direction_10m',
+  'wind_gusts_10m',
   'precipitation',
   'precipitation_probability',
   'cloud_cover',
@@ -38,9 +39,10 @@ function hourlyVars(): string {
 }
 
 function buildUrl(at: Coord): string {
+  // forecast_days=2 so the 1–3 h look-ahead window is always available, even late in the day.
   return (
     `${OM_BASE}?latitude=${at.lat}&longitude=${at.lon}` +
-    `&hourly=${hourlyVars()}&wind_speed_unit=kn&forecast_days=1&timezone=GMT`
+    `&hourly=${hourlyVars()}&wind_speed_unit=kn&forecast_days=2&timezone=GMT`
   );
 }
 
@@ -215,4 +217,41 @@ export async function getModelConditions(
   const now = deps.now ?? new Date();
   const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
   return parseModelConditions(data, now);
+}
+
+/**
+ * Short-term hourly look-ahead window: the nearest hour to `now` (inclusive) through `hours`
+ * ahead. Reuses the same cached request as the profile/conditions, so no extra network call.
+ */
+export function parseForecastWindow(
+  data: OpenMeteoResponse | undefined,
+  now: Date,
+  hours = 3,
+): ForecastHour[] {
+  const times = timesOf(data);
+  if (!times || !data?.hourly) return [];
+  const i0 = nearestHourIndex(times, now);
+  const out: ForecastHour[] = [];
+  for (let i = i0; i < times.length && i <= i0 + hours; i++) {
+    const val = reader(data.hourly, i);
+    out.push({
+      time: new Date(`${times[i]}Z`),
+      windKt: val('wind_speed_10m'),
+      gustKt: val('wind_gusts_10m'),
+      precipMm: val('precipitation'),
+      precipProb: val('precipitation_probability'),
+    });
+  }
+  return out;
+}
+
+/** Fetch the short-term forecast window (reuses the same cached request as getProfile). */
+export async function getForecastWindow(
+  coord: Coord,
+  deps: OpenMeteoDeps = {},
+): Promise<ForecastHour[]> {
+  const fj = fetcher(deps);
+  const now = deps.now ?? new Date();
+  const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
+  return parseForecastWindow(data, now);
 }
