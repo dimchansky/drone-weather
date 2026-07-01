@@ -12,11 +12,12 @@ import styles from './OverviewGrid.module.css';
 export type MoistureTone = 'warn' | 'info' | 'ok';
 
 /**
- * Short human moisture status. Dew risk keeps ThermoCard's near-saturation band (spread < 2);
- * otherwise very high RH reads "Very humid", a wide spread "Dry air".
+ * Short human moisture status. The near-saturation band keeps ThermoCard's threshold
+ * (spread < 2) but explains itself — temp is close to the dew point; otherwise very high RH
+ * reads "Very humid", a wide spread "Dry air".
  */
 export function moistureStatus(spread: number, rh: number): { text: string; tone: MoistureTone } {
-  if (spread < 2) return { text: 'Dew risk', tone: 'warn' };
+  if (spread < 2) return { text: 'Near saturation', tone: 'warn' };
   if (rh >= 85) return { text: 'Very humid', tone: 'info' };
   if (spread > 5) return { text: 'Dry air', tone: 'ok' };
   return { text: 'Moderate humidity', tone: 'ok' };
@@ -62,9 +63,21 @@ export function ThermoTile({ metar, model }: { metar: Metar; model: ModelConditi
             </div>
           </div>
         )}
-        <div className={styles.sub}>
-          {dewpC != null ? `Dew ${round(dewpC, 1)}°C · Δ ${spread}°C` : 'Dew point not reported'}
-        </div>
+        {dewpC != null ? (
+          <div className={styles.glyphRow}>
+            <Glyph kind="dewpoint" className={styles.glyphDew} size={16} />
+            <span className={styles.fact}>
+              <span>
+                Dew <strong>{round(dewpC, 1)}°C</strong>
+              </span>
+              <span>
+                Spread <strong>{spread}°C</strong>
+              </span>
+            </span>
+          </div>
+        ) : (
+          <div className={styles.sub}>Dew point not reported</div>
+        )}
         {status && (
           <div className={`${styles.chips} ${styles.chipsLeft}`}>
             <span className={`${styles.chip} ${TONE_CLASS[status.tone]}`}>{status.text}</span>

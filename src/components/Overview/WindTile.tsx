@@ -1,6 +1,7 @@
-// Compact square wind tile — the shared compass front and center, speed large in the selected
-// unit, explicit From/Drifts bearings, and gusts / variable sector as compact chips. Nothing
-// verdict-like: wind severity lives in the risk engine.
+// Wind as one instrument: the compass with the speed badge fused onto its lower rim, then the
+// From / Drifts bearings as two labelled mini-columns (both bearings always explicit), and
+// gusts / variable sector as compact chips. Nothing verdict-like: wind severity lives in the
+// risk engine.
 
 import { compassPoint } from '../../domain/geo';
 import { ktToMs, ktToKmh, round, fmtWindSpeed } from '../../domain/units';
@@ -25,24 +26,30 @@ export function WindTile({ wind }: { wind: Wind }) {
     <div className={`${styles.tile} ${styles.tileSky}`}>
       <h3 className={styles.tileTitle}>Wind</h3>
       <div className={styles.windBody}>
-        <CompassSvg wind={wind} className={styles.compass} />
-        <div className={styles.speedRow}>
-          <span className={styles.big}>{primaryNum}</span>
-          <span className={styles.bigUnit}>{primaryUnit}</span>
+        <div className={styles.compassWrap}>
+          <CompassSvg wind={wind} className={styles.compass} />
+          <div className={styles.speedBadge}>
+            <span className={styles.speedNum}>{primaryNum}</span>
+            <span className={styles.speedUnit}>{primaryUnit}</span>
+          </div>
         </div>
         {wind.calm ? (
           <div className={styles.windFrom}>Calm</div>
         ) : wind.dirDeg != null ? (
-          <>
-            <div className={styles.windFrom}>
-              From {wind.dirDeg}° {compassPoint(wind.dirDeg)}
-            </div>
-            {driftDeg != null && (
-              <div className={styles.windDrift}>
-                Drifts {driftDeg}° {compassPoint(driftDeg)}
+          <div className={styles.bearings}>
+            <div>
+              <div className={styles.bearingLabel}>From</div>
+              <div className={styles.bearingValue}>
+                {wind.dirDeg}° {compassPoint(wind.dirDeg)}
               </div>
-            )}
-          </>
+            </div>
+            <div>
+              <div className={styles.bearingLabel}>Drifts</div>
+              <div className={styles.bearingValue}>
+                {driftDeg}° {compassPoint(driftDeg!)}
+              </div>
+            </div>
+          </div>
         ) : (
           <div className={styles.windFrom}>Variable direction</div>
         )}

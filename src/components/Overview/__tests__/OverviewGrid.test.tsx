@@ -42,21 +42,24 @@ describe('OverviewGrid', () => {
     expect(txt).toContain('Partly cloudy');
     expect(txt).toContain('20');
     expect(txt).toContain('No rain now');
-    // Thermo: RH from 20/18 ≈ 88%, dew point + spread + human moisture status.
+    // Thermo: RH from 20/18 ≈ 88%, human dew/spread wording + moisture status.
     expect(txt).toMatch(/8[78]%/);
-    expect(txt).toContain('Dew 18°C · Δ 2°C');
+    expect(txt).toContain('Dew 18°C');
+    expect(txt).toContain('Spread 2°C');
     expect(txt).toContain('Very humid');
-    // Wind: 4 kt ≈ 2.1 m/s, explicit From/Drifts bearings, variable sector chip.
+    // Wind: 4 kt ≈ 2.1 m/s, From/Drifts columns keep both bearings explicit, var chip.
     expect(txt).toContain('2.1');
     expect(txt).toContain('m/s');
-    expect(txt).toContain('From 130° SE');
-    expect(txt).toContain('Drifts 310° NW');
+    expect(txt).toContain('From');
+    expect(txt).toContain('130° SE');
+    expect(txt).toContain('Drifts');
+    expect(txt).toContain('310° NW');
     expect(txt).toContain('Var 90–150°');
-    // Daylight: phase, sunrise/sunset at the arc's feet, remaining time, golden-hour range chip.
+    // Daylight: phase, sunrise/sunset at the arc's feet, relative sunset, golden-hour range chip.
     expect(txt).toContain('Daylight');
     expect(txt).toMatch(/↑\d{2}:\d{2}/);
     expect(txt).toMatch(/↓\d{2}:\d{2}/);
-    expect(txt).toMatch(/left/);
+    expect(txt).toMatch(/Sunset in \d/);
     expect(txt).toMatch(/Golden \d{2}:\d{2}–\d{2}:\d{2}/);
   });
 
@@ -76,10 +79,10 @@ describe('OverviewGrid', () => {
     expect(document.body.textContent).toMatch(/G 10\.3 m\/s/);
   });
 
-  it('flags a small dew-point spread as dew risk', () => {
+  it('flags a small dew-point spread as near saturation', () => {
     const b = brief('EYVI 281250Z 13004KT 9999 SCT030 20/19 Q1015');
     grid(b);
-    expect(document.body.textContent).toContain('Dew risk');
+    expect(document.body.textContent).toContain('Near saturation');
   });
 
   it('shows the model rain onset as the current-weather insight', () => {
@@ -93,15 +96,16 @@ describe('OverviewGrid', () => {
     expect(txt).not.toContain('No rain now');
   });
 
-  it('night state: moon condition, phase, next sunrise and dawn context', () => {
+  it('night state: moon condition, phase, next sunrise (clock + relative) and dawn context', () => {
     const b = brief('EYVI 282320Z 00000KT CAVOK 14/12 Q1016', NIGHT);
     grid(b, NIGHT);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('Clear night');
     expect(txt).toContain('Night');
     expect(txt).toMatch(/Sunrise \d{2}:\d{2}/);
+    expect(txt).toMatch(/in \d+h \d+m|in \d+m/); // relative time to sunrise
     expect(txt).toMatch(/Dawn \d{2}:\d{2}/);
-    expect(txt).not.toMatch(/left/);
+    expect(txt).not.toMatch(/Sunset in/);
   });
 
   it('model-only brief marks conditions with a model badge and never claims METAR wording', () => {

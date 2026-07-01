@@ -7,6 +7,13 @@ const PATHS = {
   droplet: [
     'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z',
   ],
+  // Dew point: a droplet settling on the ground — distinct from the airborne humidity droplet.
+  dewpoint: [
+    'M12 3.5c-.5 2-1.8 3.4-2.9 4.5A5.6 5.6 0 0 0 7 12a5 5 0 0 0 10 0 5.6 5.6 0 0 0-2.1-4c-1.1-1.1-2.4-2.5-2.9-4.5Z',
+    'M5 21h14',
+  ],
+  // Small rain cloud for the "rain ahead" chip.
+  rain: ['M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242', 'M8 14v6', 'M16 14v6', 'M12 16v6'],
 } as const;
 
 export type GlyphKind = keyof typeof PATHS;

@@ -118,13 +118,24 @@ export function DaylightTile({
         )}
         {polar == null &&
           (sunUp ? (
-            <div className={styles.dlRemaining}>
-              {fmtDuration(daylight.daylightRemainingMin!)} left
-            </div>
+            <>
+              {/* Relative first — "how long do I have" is the human question; clock time sits
+                  at the arc's ↓ label. */}
+              <div className={styles.dlRemaining}>
+                Sunset in {fmtDuration(daylight.daylightRemainingMin!)}
+              </div>
+            </>
           ) : (
-            <div className={styles.dlRemaining}>
-              {daylight.nextSunrise ? `Sunrise ${t(daylight.nextSunrise)}` : '—'}
-            </div>
+            <>
+              <div className={styles.dlRemaining}>
+                {daylight.nextSunrise ? `Sunrise ${t(daylight.nextSunrise)}` : '—'}
+              </div>
+              {daylight.nextSunrise && daylight.nextSunrise > now && (
+                <div className={styles.status}>
+                  in {fmtDuration(Math.round((daylight.nextSunrise.getTime() - now.getTime()) / 60000))}
+                </div>
+              )}
+            </>
           ))}
         {chips.length > 0 && (
           <div className={styles.chips}>

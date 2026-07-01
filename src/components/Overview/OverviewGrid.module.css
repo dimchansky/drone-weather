@@ -147,6 +147,19 @@
   color: color-mix(in srgb, var(--sun) 80%, var(--text));
 }
 
+/* Future-tense alert chip: dashed outline + tiny glyph so it can't read as observed weather. */
+.chipFuture {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--caution) 45%, var(--border));
+}
+
+.chipGlyph {
+  flex: 0 0 auto;
+}
+
 /* --- Current weather tile --- */
 
 .cwBody {
@@ -234,6 +247,29 @@
   flex: 0 0 auto;
 }
 
+.glyphDew {
+  color: var(--accent-sky);
+  opacity: 0.85;
+  flex: 0 0 auto;
+}
+
+/* Named facts with emphasized numbers ("Dew 19°C  Spread 1°C") — clearly above caption weight;
+   wraps cleanly on narrow tiles thanks to the column gap. */
+.fact {
+  display: inline-flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.fact strong {
+  color: var(--text);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
 .humidity {
   font-size: 1.45rem;
   font-weight: 700;
@@ -269,17 +305,42 @@
   text-align: center;
 }
 
-.compass {
-  width: 108px;
-  height: 108px;
-  margin-bottom: 3px;
+.compassWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.speedRow {
+.compass {
+  width: 112px;
+  height: 112px;
+}
+
+/* Speed badge fused onto the compass's lower rim — one instrument, not compass + caption. */
+.speedBadge {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  justify-content: center;
+  gap: 4px;
+  margin-top: -17px;
+  padding: 1px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  position: relative;
+}
+
+.speedNum {
+  font-size: 1.45rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.speedUnit {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dim);
 }
 
 .windFrom {
@@ -287,11 +348,26 @@
   font-weight: 600;
 }
 
-.windDrift {
-  font-size: 0.78rem;
-  font-weight: 500;
+/* From / Drifts as two labelled mini-columns. */
+.bearings {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 18px;
+  margin-top: 4px;
+}
+
+.bearingLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--text-dim);
-  margin-bottom: 2px;
+}
+
+.bearingValue {
+  font-size: 0.84rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- Daylight tile --- */

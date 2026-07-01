@@ -10,6 +10,7 @@ import type { ForecastSummary } from '../../domain/forecast';
 import { round } from '../../domain/units';
 import { fmtDuration } from '../../utils/time';
 import { WeatherIcon } from './WeatherIcon';
+import { Glyph } from './Glyphs';
 import styles from './OverviewGrid.module.css';
 
 const PRECIP_ICONS: ConditionIcon[] = ['rain', 'snow', 'thunder'];
@@ -71,7 +72,11 @@ export function CurrentWeatherTile({
         <div className={styles.cwCondition}>{cond.label}</div>
         {chip ? (
           <div className={styles.chips}>
-            <span className={`${styles.chip} ${styles.chipCaution}`}>{chip}</span>
+            {/* Dashed pill + tiny rain glyph: reads as a future alert, not observed rain. */}
+            <span className={`${styles.chip} ${styles.chipCaution} ${styles.chipFuture}`}>
+              <Glyph kind="rain" size={12} className={styles.chipGlyph} />
+              {chip}
+            </span>
           </div>
         ) : (
           // "expected" only when a forecast window actually backs the claim.
