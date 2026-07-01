@@ -67,4 +67,11 @@ describe('CloudsCard', () => {
     render(<CloudsCard brief={brief('EYVI 011200Z 22010KT 9999 BKN050 12/06 Q1015')} />);
     expect(document.body.textContent).toContain('5000 ft above ground');
   });
+
+  it('renders an automated //////CB unknown-amount layer as a CB callout without crashing', () => {
+    render(<CloudsCard brief={brief('EYVI 011200Z AUTO 30015G27KT 9999 //////CB 20/17 Q1012')} />);
+    const txt = document.body.textContent ?? '';
+    expect(txt).toContain('Cumulonimbus (CB)'); // callout still fires with unknown height
+    expect(txt).toContain('Cloud (amount unknown)'); // the unknown-cover layer label
+  });
 });
