@@ -105,6 +105,18 @@
       severity-coloured CB (NO-FLY) / TCU (CAUTION, card-only) callouts; a drone-relevance line
       vs the 120 m ops band + a ceiling-vs-base explainer. Presentation only — no parser/verdict
       change; raw METAR verbatim. Verified live at LSZB (plain), SBCH (TCU), LSZH (CB).
+- [x] **Parser-library evaluation → keep ours (Option D)** — researched `metar-taf-parser`
+      (aeharding), `@squawk/weather`, `aewx-metar-parser` + others with real spikes
+      (`research/parser-libraries/`, isolated). Kept the in-house parser: libraries can throw on
+      valid live reports, expose no partial-parse warnings, and `@squawk` drops MPS/`///`. Full
+      write-up + compatibility matrix in [parser-library-research.md](parser-library-research.md).
+- [x] **Parser hardening (never-throw, no data loss)** — characterization tests
+      (`domain/__tests__/parserHardening.test.ts`) lock never-throw + raw-verbatim + honest
+      `warnings`. Plus three small fixes: (B1) automated `//////CB`/`//////TCU` now register as
+      convective cloud (feeds `hasThunderstorm`/`hasConvectiveCloud` + the Cloud card; new `'///'`
+      unknown-amount cover); (B2) directional visibility `4000E` captured as prevailing metres when
+      none set (METAR + TAF); (B3) TAF `INTER` treated as a TEMPO-like group (origin kept in raw).
+      WS/TX/TN/turbulence/icing still degrade to `warnings`.
 
 ## Backlog / later (see idea doc §13)
 - [ ] **Wire TCU / convective cloud into the risk engine as CAUTION** — today a towering-cumulus

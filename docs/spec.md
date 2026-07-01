@@ -85,7 +85,8 @@ export type Coord = { lat: number; lon: number };           // degrees
 export type SpeedKt = number;                               // canonical speed unit: knots
 
 // ----- METAR -----
-export type CloudCover = 'FEW' | 'SCT' | 'BKN' | 'OVC' | 'VV' | 'NSC' | 'NCD' | 'SKC' | 'CLR';
+export type CloudCover = 'FEW' | 'SCT' | 'BKN' | 'OVC' | 'VV' | 'NSC' | 'NCD' | 'SKC' | 'CLR' | '///';
+//                                                          '///' = amount unknown (//////CB/TCU only)
 export interface CloudLayer {
   cover: CloudCover;
   baseFt: number | null;   // ft AGL (null for VV with unknown, or sky-clear codes)
@@ -182,9 +183,15 @@ parseMetar(raw: string, hints?: Partial<Metar>): Metar
   parser fills the gaps NOAA doesn't expand: **variable wind sector** (`dddVddd`,
   `VRB`), **weather phenomena** codes, **trend** (`NOSIG`/`TEMPO`/`BECMG`), `CAVOK`,
   `CB`/`TCU` flags, and `VV`.
-- Visibility normalization: `10+`/`9999`/`P6SM` → 10000 m (≥10 km). SM → m.
+- Visibility normalization: `10+`/`9999`/`P6SM` → 10000 m (≥10 km). SM → m. Directional minimum
+  visibility (`4000E`/`1400SW`) is read as prevailing metres **only when no prevailing vis is set**.
+- Cloud markers: `COVERbbb///` keeps the base (type unknown); an automated `//////CB`/`//////TCU`
+  (amount unknown) is kept **only** when it carries a CB/TCU flag → a `'///'` unknown-amount layer
+  that still feeds `hasThunderstorm`/`hasConvectiveCloud`; a bare `//////` is dropped as noise.
 - `ageMin` computed against current time at call site (pass a clock for tests).
-- Must never throw on odd input — unknown tokens are collected, not fatal.
+- **Never throws** on odd input — unknown tokens are ignored (METAR) / collected in `warnings`
+  (TAF), not fatal. Locked by `domain/__tests__/parserHardening.test.ts`. TAF `INTER` is treated as
+  a TEMPO-like group (origin kept in the group's raw text); `WS`/`TX`·`TN`/turbulence/icing → `warnings`.
 
 ### 4.4 `humidity.ts`  (Magnus; a = 17.625, b = 243.04)
 ```ts

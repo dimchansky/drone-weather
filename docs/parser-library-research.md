@@ -192,8 +192,11 @@ Options considered:
    than it looks, against real migration risk to a tested, shipping decision path (371 tests).
 
 **Concrete low-risk follow-ups (Option D "borrow"):**
-- Harden our test corpus with edge cases surfaced here (e.g. `4000E` directional visibility;
-  `//////CB`; `P6SM`/`M1/4SM`; INTER groups) so our parser stays robust.
+- ✅ **Done (2026-07-01):** hardened the parser against the edge cases surfaced here —
+  characterization tests (`src/domain/__tests__/parserHardening.test.ts`) lock never-throw +
+  raw-verbatim + honest `warnings`, plus three small fixes: automated `//////CB`/`//////TCU` →
+  convective cloud (B1), directional visibility `4000E` → prevailing metres when none set (B2), and
+  TAF `INTER` → TEMPO-like group (B3). `P6SM`/`M1/4SM` were already correct and are now locked.
 - *Optionally, later:* parse `WS`/`TX`·`TN`/turbulence/icing structurally (today they go to
   `warnings`) **only if** a feature needs them — this is the one genuine capability gap vs the
   libraries.
