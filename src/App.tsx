@@ -23,6 +23,7 @@ import { daylightBannerLine } from './components/Daylight/daylightText';
 import { ForecastStrip } from './components/Forecast/ForecastStrip';
 import { forecastBannerNote } from './components/Forecast/forecastText';
 import { TafStrip } from './components/Taf/TafStrip';
+import { TafDetailsCard } from './components/Taf/TafDetailsCard';
 import { tafBannerNote } from './components/Taf/tafText';
 import type { SecondaryLine } from './components/Risk/DecisionBanner';
 import { WindCompass } from './components/Wind/WindCompass';
@@ -75,13 +76,14 @@ export function App() {
   // stays live; wind values are formatted per unit in the strip/note.
   const fc = useMemo(() => (brief ? summarizeForecast(now, brief.forecast) : null), [brief, now]);
 
-  // TAF (aviation airport forecast) summary — parsed from the raw TAF, near-term hazards only.
-  // Advisory: kept separate from the Open-Meteo point forecast; never changes the verdict.
-  const taf = useMemo(() => {
+  // TAF (aviation airport forecast) — parse once, then derive the near-term summary. Advisory:
+  // kept separate from the Open-Meteo point forecast; never changes the verdict.
+  const tafParsed = useMemo(() => {
     if (!brief?.taf) return null;
     const ref = brief.taf.validFrom ?? brief.taf.issuedAt ?? now;
-    return summarizeTaf(parseTaf(brief.taf.raw, { reference: ref }), now);
+    return parseTaf(brief.taf.raw, { reference: ref });
   }, [brief, now]);
+  const taf = useMemo(() => (tafParsed ? summarizeTaf(tafParsed, now) : null), [tafParsed, now]);
 
   // Banner secondary lines: daylight (always) + short notes only when notable (forecast, then TAF).
   const secondary: SecondaryLine[] = [];
@@ -161,6 +163,12 @@ export function App() {
             <CloudsCard brief={brief} />
             <ThermoCard metar={brief.metar} />
             <StationCard brief={brief} now={now} />
+            <TafDetailsCard
+              taf={tafParsed}
+              windUnit={windUnit}
+              altUnit={altUnit}
+              locationTime={brief.locationTime}
+            />
             <RawData brief={brief} />
           </>
         )}

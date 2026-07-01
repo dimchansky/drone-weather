@@ -10,12 +10,15 @@ import { fmtTimeInZone, fmtUtcTime } from '../../utils/time';
 
 const MAX_SHOWN = 3;
 
-/** "11:00–13:00 (08:00–10:00 UTC)" — flight-site local time primary, UTC secondary (TAF is native UTC). */
-function timeWindow(h: TafHazard, lt: LocationTime): string {
+/**
+ * "11:00–13:00 (08:00–10:00 UTC)" — flight-site local time primary, UTC secondary (TAF is native
+ * UTC). A single time (to=null, e.g. FM) → "14:00 (14:00 UTC)". Shared with the TAF details card.
+ */
+export function windowLocalUtc(from: Date | null, to: Date | null, lt: LocationTime): string {
   const l = (d: Date): string => fmtTimeInZone(d, lt);
   const u = (d: Date): string => fmtUtcTime(d).replace('Z', '');
-  const local = h.from && h.to ? `${l(h.from)}–${l(h.to)}` : h.from ? l(h.from) : '';
-  const utc = h.from && h.to ? `${u(h.from)}–${u(h.to)} UTC` : h.from ? `${u(h.from)} UTC` : '';
+  const local = from && to ? `${l(from)}–${l(to)}` : from ? l(from) : '';
+  const utc = from && to ? `${u(from)}–${u(to)} UTC` : from ? `${u(from)} UTC` : '';
   return local ? `${local} (${utc})` : '';
 }
 
@@ -41,7 +44,7 @@ function hazardNoun(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string 
 /** A full plain-language hazard phrase, e.g. "thunderstorms possible at times 11:00–17:00 (08:00–14:00 UTC)". */
 export function hazardPhrase(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit, lt: LocationTime): string {
   const noun = hazardNoun(h, windUnit, altUnit);
-  const win = timeWindow(h, lt);
+  const win = windowLocalUtc(h.from, h.to, lt);
 
   if (h.changeType === 'PROB' && h.probPct != null) {
     const atTimes = h.tempo ? 'at times ' : '';
