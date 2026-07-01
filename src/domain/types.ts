@@ -88,6 +88,16 @@ export interface VerticalProfile {
   note: string;
 }
 
+/**
+ * Location timezone metadata (from Open-Meteo `timezone=auto`) so daylight/TAF times can display in
+ * the flight site's local time, with a graceful device-local fallback.
+ */
+export interface LocationTime {
+  utcOffsetSeconds: number; // offset of the flight-site local time from UTC
+  timezone: string | null; // IANA name, e.g. "Europe/Vilnius"; null on device fallback
+  source: 'open-meteo' | 'device-fallback';
+}
+
 /** One hour of the short-term model forecast look-ahead window (Open-Meteo). */
 export interface ForecastHour {
   time: Date;

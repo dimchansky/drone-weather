@@ -2,7 +2,7 @@
 // profile from pressure-level data, plus a surface fallback when no METAR is nearby.
 // See docs/spec.md §6.3.
 
-import type { Coord, ForecastHour, ModelConditions, ProfileLevel } from '../domain/types';
+import type { Coord, ForecastHour, LocationTime, ModelConditions, ProfileLevel } from '../domain/types';
 import { dewPointFromRH } from '../domain/humidity';
 import { cachedFetchJson } from './cache';
 
@@ -254,4 +254,32 @@ export async function getForecastWindow(
   const now = deps.now ?? new Date();
   const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
   return parseForecastWindow(data, now);
+}
+
+/** Device-local offset as a LocationTime fallback (used when the model timezone is unavailable). */
+function deviceLocationTime(now?: Date): LocationTime {
+  const d = now ?? new Date();
+  return { utcOffsetSeconds: -d.getTimezoneOffset() * 60, timezone: null, source: 'device-fallback' };
+}
+
+/**
+ * Resolve the flight-site timezone via Open-Meteo `timezone=auto` (returns utc_offset_seconds + the
+ * IANA name). A small, separately-cached request — keeps the main data fetch in UTC (unchanged).
+ * Falls back to the device's local offset if the model timezone is unavailable.
+ */
+export async function getLocationTime(coord: Coord, deps: OpenMeteoDeps = {}): Promise<LocationTime> {
+  const fj = fetcher(deps);
+  const now = deps.now ?? new Date();
+  try {
+    const url =
+      `${OM_BASE}?latitude=${coord.lat}&longitude=${coord.lon}` +
+      `&current=temperature_2m&timezone=auto&forecast_days=1`;
+    const data = (await fj(url)) as { utc_offset_seconds?: number; timezone?: string } | undefined;
+    if (data && typeof data.utc_offset_seconds === 'number') {
+      return { utcOffsetSeconds: data.utc_offset_seconds, timezone: data.timezone ?? null, source: 'open-meteo' };
+    }
+  } catch {
+    // network/parse failure → device fallback below
+  }
+  return deviceLocationTime(now);
 }

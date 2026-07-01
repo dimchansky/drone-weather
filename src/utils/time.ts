@@ -1,5 +1,7 @@
 // Time / age helpers. Pure and deterministic (callers pass `now`).
 
+import type { LocationTime } from '../domain/types';
+
 const pad = (n: number): string => String(n).padStart(2, '0');
 
 /** Whole minutes between an observation and `now`, clamped at 0. */
@@ -22,4 +24,16 @@ export function fmtDuration(totalMin: number): string {
   const m = Math.max(0, Math.round(totalMin));
   const h = Math.floor(m / 60);
   return h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
+}
+
+/** Format an absolute instant as HH:MM in the flight-site's local time (via its UTC offset). */
+export function fmtTimeInZone(d: Date, lt: LocationTime): string {
+  const shifted = new Date(d.getTime() + lt.utcOffsetSeconds * 1000);
+  return `${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`;
+}
+
+/** Human label for the time source: the IANA zone name, "location time", or "device local time". */
+export function timeSourceLabel(lt: LocationTime): string {
+  if (lt.source === 'device-fallback') return 'device local time';
+  return lt.timezone ?? 'location time';
 }

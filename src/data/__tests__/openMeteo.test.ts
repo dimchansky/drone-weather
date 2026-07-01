@@ -5,6 +5,7 @@ import {
   getSurfaceFallback,
   parseModelConditions,
   parseForecastWindow,
+  getLocationTime,
 } from '../openMeteo';
 import fixture from './fixtures/openmeteo-profile.json';
 
@@ -113,5 +114,29 @@ describe('parseForecastWindow', () => {
 
   it('is empty for an undefined response', () => {
     expect(parseForecastWindow(undefined, NOON)).toEqual([]);
+  });
+});
+
+describe('getLocationTime', () => {
+  it('reads utc_offset_seconds + timezone from the model (timezone=auto)', async () => {
+    const fetchJson = async () => ({ utc_offset_seconds: 25200, timezone: 'Asia/Ho_Chi_Minh' });
+    const lt = await getLocationTime({ lat: 10.8, lon: 106.7 }, { fetchJson });
+    expect(lt).toEqual({ utcOffsetSeconds: 25200, timezone: 'Asia/Ho_Chi_Minh', source: 'open-meteo' });
+  });
+
+  it('falls back to the device offset when the model timezone is unavailable', async () => {
+    const fetchJson = async () => ({}); // no utc_offset_seconds
+    const now = new Date('2026-07-01T12:00:00Z');
+    const lt = await getLocationTime({ lat: 0, lon: 0 }, { fetchJson, now });
+    expect(lt.source).toBe('device-fallback');
+    expect(lt.utcOffsetSeconds).toBe(-now.getTimezoneOffset() * 60);
+  });
+
+  it('falls back on a fetch error', async () => {
+    const fetchJson = async () => {
+      throw new Error('network');
+    };
+    const lt = await getLocationTime({ lat: 0, lon: 0 }, { fetchJson });
+    expect(lt.source).toBe('device-fallback');
   });
 });
