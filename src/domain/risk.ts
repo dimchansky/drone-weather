@@ -11,9 +11,11 @@ import type {
   RiskSummary,
   Severity,
   VerticalProfile,
+  Wind,
 } from './types';
 import { ktToMs, mToFt, round, fmtWindSpeed, fmtAlt, fmtAltFt, type WindUnit, type AltUnit } from './units';
 import { ceilingFt } from './clouds';
+import { compassPoint } from './geo';
 import { envSaturationHeightM } from './saturation';
 import { rhFromDewPoint } from './humidity';
 import {
@@ -58,7 +60,7 @@ const windWithKt = (speedKt: number, unit: WindUnit): string =>
 
 export function windRisk(speedKt: number, dirDeg: number | null, unit: WindUnit = 'kt'): RiskComponent {
   const severity = windSeverity(ktToMs(speedKt));
-  const from = dirDeg == null ? 'variable' : `${dirDeg}°`;
+  const from = dirDeg == null ? 'variable' : `${dirDeg}° (${compassPoint(dirDeg)})`;
   const qual = { GOOD: 'light', CAUTION: 'moderate', HIGH: 'strong', NOFLY: 'very strong' }[
     severity
   ];
@@ -353,13 +355,76 @@ export function assessRisk(inputs: RiskInputs): RiskSummary {
     overall = bumpSeverity(overall, 'HIGH');
   }
 
+  const primary = pickPrimary(weather);
   return {
     overall,
     confidence,
     uncertain,
     components: [...weather, fresh.component, dist.component],
     headline: buildHeadline(overall, weather, uncertain),
+    primary,
+    advice: buildAdvice(overall, primary, metar.wind, uncertain),
   };
+}
+
+/**
+ * The single dominant weather driver: the worst-severity weather component, tie-broken by the
+ * built-in priority order (wind, gust, visibility, moisture, ceiling, icing) — the same order
+ * that determines `overall`. Null when nothing is above GOOD (no weather concern to name).
+ */
+function pickPrimary(weather: RiskComponent[]): RiskComponent | null {
+  const worst = maxSeverity(weather.map((c) => c.severity));
+  if (worst === 'GOOD') return null;
+  return weather.find((c) => c.severity === worst) ?? null;
+}
+
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Short, hedged pilot advice keyed off the dominant driver. Never asserts "safe to fly": GOOD
+ * stays "good for a short local VLOS flight"; a confidence-only bump (no weather driver) says so.
+ */
+function buildAdvice(
+  overall: Severity,
+  primary: RiskComponent | null,
+  wind: Wind,
+  uncertain: boolean,
+): string {
+  if (primary == null) {
+    return overall === 'GOOD'
+      ? 'Good for a short local VLOS flight — no significant weather concerns.'
+      : 'Weather looks reasonable, but data confidence is reduced — verify against the raw METAR before you rely on it.';
+  }
+
+  let clause: string;
+  switch (primary.key) {
+    case 'wind':
+    case 'gust':
+      clause =
+        wind.calm || wind.dirDeg == null
+          ? 'wind is gusty or shifting — keep the drone close and expect drift in all directions'
+          : 'start outbound into the wind and return with the wind — fly the harder leg on a fresher battery';
+      break;
+    case 'visibility':
+      clause = 'keep the drone close and within sight (VLOS)';
+      break;
+    case 'moisture':
+      clause = 'expect a wet airframe — protect optics and electronics, or wait for drier air';
+      break;
+    case 'ceiling':
+      clause = 'stay well below the low cloud base and avoid climbing into it';
+      break;
+    case 'icing':
+      clause = 'stay low and short, and watch for airframe icing';
+      break;
+    default:
+      clause = 'review the conditions below before flying';
+  }
+
+  const sentence =
+    overall === 'NOFLY' ? `Not recommended right now — ${clause}.` : `${cap(clause)}.`;
+  const tail = uncertain ? ' Reduced confidence — verify against the raw METAR.' : '';
+  return `${sentence}${tail}`;
 }
 
 function buildHeadline(overall: Severity, weather: RiskComponent[], uncertain: boolean): string {

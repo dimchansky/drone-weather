@@ -118,4 +118,8 @@ export interface RiskSummary {
   components: RiskComponent[];
   headline: string;
   uncertain: boolean;
+  /** Single dominant weather driver (worst severity, priority-ordered); null when GOOD. */
+  primary: RiskComponent | null;
+  /** Short, hedged pilot advice keyed off the primary driver. Never asserts "safe to fly". */
+  advice: string;
 }

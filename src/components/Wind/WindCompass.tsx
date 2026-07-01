@@ -1,5 +1,6 @@
 import { Card } from '../common/Card';
 import { compassPoint } from '../../domain/geo';
+import { routeAdvice } from '../../domain/windAdvice';
 import { ktToMs, ktToKmh, round, fmtWindSpeed } from '../../domain/units';
 import { useSettingsStore } from '../../store/settingsStore';
 import type { Wind } from '../../domain/types';
@@ -132,13 +133,7 @@ export function WindCompass({ wind }: { wind: Wind }) {
         </div>
       </div>
 
-      <p className={styles.advice}>
-        {wind.calm
-          ? 'Winds are calm — direction is not a concern for your route.'
-          : wind.dirDeg != null
-            ? `Tip: fly outbound toward ${wind.dirDeg}° (${compassPoint(wind.dirDeg)}) — into the wind — and return with the wind toward ${driftDeg}° (${compassPoint(driftDeg!)}). The harder leg is then flown on a fresher battery.`
-            : 'Wind direction is variable — plan for shifting drift in all directions.'}
-      </p>
+      <p className={styles.advice}>{routeAdvice(wind)}</p>
     </Card>
   );
 }

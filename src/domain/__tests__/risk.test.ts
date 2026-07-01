@@ -310,3 +310,59 @@ describe('freshness/distance wording by data source', () => {
     expect(`${fresh.reason} ${dist.reason}`).not.toMatch(/METAR is/);
   });
 });
+
+describe('dominant reason + advice (decision banner)', () => {
+  const base = { icingWorst: 'GOOD' as const, icingReason: 'low', distanceKm: 5, now: NOW };
+
+  it('wind reason names the compass point of the source direction', () => {
+    expect(windRisk(15, 290).reason).toMatch(/290° \(WNW\)/);
+    // canonical speed substring still present (existing behaviour unchanged)
+    expect(windRisk(15, 290, 'ms').reason).toMatch(/7\.7 m\/s \(15 kt\)/);
+  });
+
+  it('primary is null and advice is hedged GOOD copy for benign conditions', () => {
+    const r = assessRisk({ metar: m('LFPG 281200Z 27006KT CAVOK 20/05 Q1016'), ...base });
+    expect(r.primary).toBeNull();
+    expect(r.advice).toMatch(/short local VLOS/i);
+    expect(r.advice).not.toMatch(/safe to fly/i);
+  });
+
+  it('primary is the worst weather component (wind) carrying its magnitude value', () => {
+    const r = assessRisk({ metar: m('LFPG 281200Z 29018KT CAVOK 20/05 Q1016'), ...base });
+    expect(r.primary?.key).toBe('wind');
+    expect(r.primary?.value).toBe('18 kt');
+    expect(r.advice).toMatch(/into the wind/i);
+  });
+
+  it('NO-FLY advice leads with "Not recommended"', () => {
+    const r = assessRisk({
+      metar: m('BIKF 281200Z 03010KT 0300 FZFG M02/M03 Q0995'),
+      icingWorst: 'NOFLY',
+      icingReason: 'freezing fog',
+      distanceKm: 5,
+      now: NOW,
+    });
+    expect(r.overall).toBe('NOFLY');
+    expect(r.advice).toMatch(/^Not recommended/);
+  });
+
+  it('reduced confidence appends a verify-the-METAR note', () => {
+    const r = assessRisk({
+      metar: m('LFPG 281200Z 29018KT CAVOK 20/05 Q1016'),
+      icingWorst: 'GOOD',
+      icingReason: 'low',
+      distanceKm: 60,
+      now: NOW,
+    });
+    expect(r.uncertain).toBe(true);
+    expect(r.primary?.key).toBe('wind');
+    expect(r.advice).toMatch(/Reduced confidence — verify against the raw METAR/);
+  });
+
+  it('ties break by priority order (wind before an equal-severity later factor)', () => {
+    // 29018KT → HIGH wind; 1200 m → HIGH visibility. Wind is earlier in the priority order.
+    const r = assessRisk({ metar: m('LFPG 281200Z 29018KT 1200 20/05 Q1016'), ...base });
+    expect(r.overall).toBe('HIGH');
+    expect(r.primary?.key).toBe('wind');
+  });
+});
