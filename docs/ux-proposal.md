@@ -41,6 +41,9 @@ sources always labelled; the raw METAR always available verbatim.
 - `ForecastStrip` *(Iteration 3)* — short-term **model** forecast: *"Next 3h (model): wind steady ·
   gusts to 15 kt · no rain expected"* / *"…rain likely in ~45m"*. Colored by the forecast advisory
   (CAUTION when rain/rising wind ahead). Always labelled "model" so it never reads as observed.
+- `TafStrip` — the **aviation TAF** near-term hazards: *"TAF EDDB · airport forecast: TEMPO
+  thunderstorms 10–14Z · …"*. Labelled airport-forecast (not your exact site), UTC windows,
+  advisory-only. Separate from the model `ForecastStrip`; the raw TAF stays verbatim in the Raw card.
 - `DaylightStrip` *(Iteration 2)* — sunrise/sunset · daylight remaining · golden-hour window, or a
   night/twilight advisory. Colored by the daylight severity (CAUTION in twilight/night, never
   NO-FLY). Times are **device-local** and the strip says so.
@@ -90,13 +93,18 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   double-count); shares the type label + thresholds with `PrecipNowPill`; source-labelled (METAR vs
   model).
 
+- **TAF parsing (done 2026-07-01):** pure `domain/taf.ts` parses the raw TAF (BASE/FM/BECMG/TEMPO/
+  PROB, wind+gusts/vis/weather/clouds) with a `warnings` partial-parse signal for unsupported
+  tokens; `summarizeTaf` surfaces near-term hazards (TS, low ceiling/vis, gusts, rain/snow) as a
+  Layer-2 `TafStrip` (**airport forecast**, UTC windows, CAUTION-capped advisory) + a banner note
+  for thunderstorms. Kept **separate** from the Open-Meteo point forecast — both shown,
+  source-labelled; TAF never changes the observed-weather verdict.
+
 ### Next up (prioritized)
 
-1. **TAF parsing** *(next)* — decode the raw TAF (change groups, TEMPO/BECMG/PROB) as a richer,
-   longer-range forecast source that complements the Open-Meteo hourly trend.
-2. **True location timezone** — a coordinate→IANA-tz lookup so daylight/forecast times are correct
-   for distant sites (they render **device-local** today, clearly labelled; fine near the flight
-   site, which is the primary use case).
+1. **True location timezone** *(next)* — a coordinate→IANA-tz lookup so daylight/forecast times are
+   correct for distant sites (they render **device-local** today, clearly labelled; fine near the
+   flight site, which is the primary use case). TAF times are UTC (`Z`), so unaffected.
 
 ### Later / optional
 

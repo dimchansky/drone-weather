@@ -93,9 +93,11 @@
 - [x] **Dedicated precipitation risk** — `precipRisk` is a first-class weather factor (own
       `RiskFactors` row before Moisture + verdict/Main-issue contribution); split out of
       `moistureRisk` (no double-count); shares thresholds/labels with `PrecipNowPill`; source-labelled.
-- [ ] **1. TAF parsing** — decode raw TAF (change groups, TEMPO/BECMG/PROB) as a longer-range source.
-- [ ] **2. True location timezone** — coordinate→IANA-tz lookup (daylight/forecast times are
-      device-local today, labelled).
+- [x] **TAF parsing** — pure `domain/taf.ts` (BASE/FM/BECMG/TEMPO/PROB + wind/gusts/vis/weather/
+      clouds, `warnings` partial-parse); `summarizeTaf` near-term hazards → Layer-2 `TafStrip`
+      (airport forecast, UTC, CAUTION-cap advisory) + TS banner note; separate from Open-Meteo.
+- [ ] **1. True location timezone** — coordinate→IANA-tz lookup (daylight/forecast times are
+      device-local today, labelled; TAF times are UTC/Z).
 
 ## Backlog / later (see idea doc §13)
 - [ ] Aircraft profiles / configurable per-drone thresholds — **deprioritized (optional)**

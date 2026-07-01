@@ -386,7 +386,8 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 
 1. **Decision** — `DecisionBanner`.
 2. **Decision support** (compact strips, always visible) — `StatusStrip` → `PrecipNowPill` →
-   `ForecastStrip` → `DaylightStrip` → `RiskFactors` → `VerticalHazardStrip` → `WindCompass`.
+   `ForecastStrip` → `TafStrip` → `DaylightStrip` → `RiskFactors` → `VerticalHazardStrip` →
+   `WindCompass`.
 3. **Technical detail** (collapsible `Card`, collapsed by default) — `VerticalAnalyzer` →
    `Clouds` → `ThermoMoisture` → `Station` → **Raw METAR/TAF** → disclaimer/version footer.
 
@@ -408,6 +409,11 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
   night/twilight CAUTION advisory. Device-local times (labelled); never auto-NO-FLY.
 - `ForecastStrip` — short-term 1–3 h model forecast (`domain/forecast.ts` over the Open-Meteo
   hourly window): wind/gust trend + rain onset. Labelled "model"; CAUTION when notable.
+- `TafStrip` — aviation TAF near-term hazards (`domain/taf.ts` `parseTaf` + `summarizeTaf`):
+  TS/low-ceiling/low-vis/gusts/rain from BASE/FM/BECMG/TEMPO/PROB groups, UTC windows. Labelled
+  **airport forecast** (not the exact launch point); advisory-only (CAUTION cap), kept separate
+  from the model `ForecastStrip`; a `warnings` array flags a partial parse. Raw TAF stays verbatim
+  in the Raw card. Never changes the observed-weather verdict.
 - `WindCompass` — SVG compass: **source arrow** + **drift arrow** (opposite) + variable arc;
   speed in all three units; gust; `routeAdvice` (shared with the banner).
 - `VerticalAnalyzer` — SVG chart: altitude axis (focus 0–120 m, toggle to 1000 m),
