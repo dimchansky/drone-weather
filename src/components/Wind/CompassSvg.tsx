@@ -1,6 +1,7 @@
-// The wind compass SVG, extracted from WindCompass so the dashboard Wind tile and the full
-// WindCompass card can share one drawing. Renders in a 200×200 viewBox; the caller sizes it
-// via `className`. Shows the FROM→drift arrow, the variable-direction arc, and CALM/VRB states.
+// The wind compass SVG, shared by the dashboard Wind tile and the (retired-from-page, kept
+// in-tree) WindCompass card. Drawn as a small instrument: face with an inner rim, cardinal
+// letters near the edge, a glowing FROM→drift arrow with a sleek head, and a pivot hub.
+// Renders in a 200×200 viewBox; the caller sizes it via `className`. Handles CALM/VRB states.
 
 import type { Wind } from '../../domain/types';
 import styles from './CompassSvg.module.css';
@@ -26,15 +27,16 @@ export function CompassSvg({ wind, className }: { wind: Wind; className?: string
   const driftDeg = wind.dirDeg != null ? (wind.dirDeg + 180) % 360 : null;
 
   // Wind blows FROM dirDeg TO driftDeg; arrow tip at the drift end (direction of travel).
-  const src = wind.dirDeg != null ? pt(wind.dirDeg, R) : null;
-  const dst = driftDeg != null ? pt(driftDeg, R) : null;
+  // The line stops short of the tip so the head stays crisp.
+  const src = wind.dirDeg != null ? pt(wind.dirDeg, R - 4) : null;
+  const lineEnd = driftDeg != null ? pt(driftDeg, R - 14) : null;
   const head =
     driftDeg != null
       ? (() => {
-          const tip = pt(driftDeg, R);
-          const baseC = pt(driftDeg, R - 16);
+          const tip = pt(driftDeg, R - 1);
+          const baseC = pt(driftDeg, R - 17);
           const p = { x: Math.cos(rad(driftDeg)), y: Math.sin(rad(driftDeg)) }; // perpendicular
-          return `${tip.x},${tip.y} ${baseC.x + p.x * 8},${baseC.y + p.y * 8} ${baseC.x - p.x * 8},${baseC.y - p.y * 8}`;
+          return `${tip.x},${tip.y} ${baseC.x + p.x * 6.5},${baseC.y + p.y * 6.5} ${baseC.x - p.x * 6.5},${baseC.y - p.y * 6.5}`;
         })()
       : null;
 
@@ -49,15 +51,22 @@ export function CompassSvg({ wind, className }: { wind: Wind; className?: string
   return (
     <svg viewBox="0 0 200 200" className={className} role="img" aria-label="Wind direction compass">
       <circle cx={CX} cy={CY} r={R} className={styles.ring} />
+      <circle cx={CX} cy={CY} r={R - 6} className={styles.rim} />
       {Array.from({ length: 12 }, (_, i) => i * 30).map((d) => {
         const o = pt(d, R);
         const inn = pt(d, R - 7);
         return <line key={d} x1={o.x} y1={o.y} x2={inn.x} y2={inn.y} className={styles.tick} />;
       })}
       {CARDINALS.map(({ d, l }) => {
-        const p = pt(d, R - 18);
+        const p = pt(d, R - 15);
         return (
-          <text key={l} x={p.x} y={p.y} className={styles.card} dominantBaseline="central">
+          <text
+            key={l}
+            x={p.x}
+            y={p.y}
+            className={l === 'N' ? styles.cardNorth : styles.card}
+            dominantBaseline="central"
+          >
             {l}
           </text>
         );
@@ -65,21 +74,24 @@ export function CompassSvg({ wind, className }: { wind: Wind; className?: string
 
       {varArc && <path d={varArc} className={styles.varArc} />}
 
-      {hasDir && src && dst && (
+      {hasDir && src && lineEnd && (
         <>
-          <line x1={src.x} y1={src.y} x2={dst.x} y2={dst.y} className={styles.arrow} />
+          <line x1={src.x} y1={src.y} x2={lineEnd.x} y2={lineEnd.y} className={styles.arrowGlow} />
+          <line x1={src.x} y1={src.y} x2={lineEnd.x} y2={lineEnd.y} className={styles.arrow} />
           {head && <polygon points={head} className={styles.headFill} />}
           <circle cx={src.x} cy={src.y} r={4} className={styles.srcDot} />
         </>
       )}
-      <circle cx={CX} cy={CY} r={3} className={styles.center} />
+      {/* Pivot hub — an instrument axle rather than a bare dot. */}
+      <circle cx={CX} cy={CY} r={5} className={styles.hub} />
+      <circle cx={CX} cy={CY} r={1.8} className={styles.hubPin} />
       {wind.calm && (
-        <text x={CX} y={CY} className={styles.calm} textAnchor="middle" dominantBaseline="central">
+        <text x={CX} y={CY + 26} className={styles.calm} textAnchor="middle" dominantBaseline="central">
           CALM
         </text>
       )}
       {!wind.calm && wind.dirDeg == null && (
-        <text x={CX} y={CY} className={styles.calm} textAnchor="middle" dominantBaseline="central">
+        <text x={CX} y={CY + 26} className={styles.calm} textAnchor="middle" dominantBaseline="central">
           VRB
         </text>
       )}

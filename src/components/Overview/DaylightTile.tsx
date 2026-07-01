@@ -66,7 +66,12 @@ export function DaylightTile({
   return (
     <div className={`${styles.tile} ${sunUp ? styles.tileSun : styles.tileMoon}`}>
       <h3 className={styles.tileTitle}>Daylight</h3>
-      <svg viewBox="0 0 100 60" className={styles.arc} role="img" aria-label={`Daylight: ${PHASE_LABEL[phase]}`}>
+      <svg
+        viewBox="0 0 100 60"
+        className={sunUp ? styles.arc : `${styles.arc} ${styles.arcNight}`}
+        role="img"
+        aria-label={`Daylight: ${PHASE_LABEL[phase]}`}
+      >
         <line x1="4" y1="50" x2="96" y2="50" className={styles.arcHorizon} />
         <path d="M 10 50 A 40 40 0 0 1 90 50" className={styles.arcTrack} />
         {progress != null && (
@@ -93,12 +98,22 @@ export function DaylightTile({
           </>
         )}
         {progress == null && (
-          // Sun below the horizon (or polar night): moon and faint stars instead of the sun marker.
+          // Sun below the horizon (or polar night): moon and faint stars instead of the sun
+          // marker, plus — when a sunrise is coming — a rising half-sun at the arc's left foot
+          // with its time, so "what happens next" is on the instrument itself.
           <>
             <path d={MOON_PATH} className={styles.arcMoon} transform="translate(41.5 12) scale(0.75)" />
             <circle cx="26" cy="24" r="0.9" className={styles.arcStar} />
             <circle cx="71" cy="18" r="0.9" className={styles.arcStar} />
             <circle cx="63" cy="33" r="0.7" className={styles.arcStar} />
+            {polar == null && daylight.nextSunrise && (
+              <>
+                <path d="M 6 50 A 4 4 0 0 1 14 50 Z" className={styles.arcRise} />
+                <text x="10" y="58" textAnchor="middle" className={styles.arcLabelSun}>
+                  ↑{t(daylight.nextSunrise)}
+                </text>
+              </>
+            )}
           </>
         )}
       </svg>

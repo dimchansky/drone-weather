@@ -42,10 +42,12 @@ describe('OverviewGrid', () => {
     expect(txt).toContain('Partly cloudy');
     expect(txt).toContain('20');
     expect(txt).toContain('No rain now');
-    // Thermo: RH from 20/18 ≈ 88%, human dew/spread wording + moisture status.
+    // Thermo: RH from 20/18 ≈ 88%, labelled Dew/Spread mini-columns + moisture status.
     expect(txt).toMatch(/8[78]%/);
-    expect(txt).toContain('Dew 18°C');
-    expect(txt).toContain('Spread 2°C');
+    expect(txt).toContain('Dew');
+    expect(txt).toContain('18°C');
+    expect(txt).toContain('Spread');
+    expect(txt).toContain('2°C');
     expect(txt).toContain('Very humid');
     // Wind: 4 kt ≈ 2.1 m/s, From/Drifts columns keep both bearings explicit, var chip.
     expect(txt).toContain('2.1');

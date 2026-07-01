@@ -253,20 +253,24 @@
   flex: 0 0 auto;
 }
 
-/* Named facts with emphasized numbers ("Dew 19°C  Spread 1°C") — clearly above caption weight;
-   wraps cleanly on narrow tiles thanks to the column gap. */
-.fact {
-  display: inline-flex;
-  flex-wrap: wrap;
-  column-gap: 10px;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  line-height: 1.35;
+/* Labelled mini-fact columns (Dew / Spread) — same pattern as the wind bearings. */
+.miniFacts {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1px 18px;
 }
 
-.fact strong {
-  color: var(--text);
-  font-weight: 650;
+.miniLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.miniValue {
+  font-size: 0.84rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -411,6 +415,24 @@
   font-size: 6.5px;
   font-weight: 600;
   fill: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Night: the arc recedes so the moon and the coming sunrise carry the story. */
+.arcNight .arcTrack {
+  opacity: 0.55;
+}
+
+/* Rising half-sun at the arc's left foot (next sunrise) + its sun-tinted time label. */
+.arcRise {
+  fill: var(--sun);
+  opacity: 0.9;
+}
+
+.arcLabelSun {
+  font-size: 6.5px;
+  font-weight: 700;
+  fill: color-mix(in srgb, var(--sun) 75%, var(--text));
   font-variant-numeric: tabular-nums;
 }
 

@@ -74,7 +74,7 @@ export function CurrentWeatherTile({
           <div className={styles.chips}>
             {/* Dashed pill + tiny rain glyph: reads as a future alert, not observed rain. */}
             <span className={`${styles.chip} ${styles.chipCaution} ${styles.chipFuture}`}>
-              <Glyph kind="rain" size={12} className={styles.chipGlyph} />
+              <Glyph kind="rain" size={13} className={styles.chipGlyph} />
               {chip}
             </span>
           </div>

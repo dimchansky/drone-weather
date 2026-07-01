@@ -66,14 +66,16 @@ export function ThermoTile({ metar, model }: { metar: Metar; model: ModelConditi
         {dewpC != null ? (
           <div className={styles.glyphRow}>
             <Glyph kind="dewpoint" className={styles.glyphDew} size={16} />
-            <span className={styles.fact}>
-              <span>
-                Dew <strong>{round(dewpC, 1)}°C</strong>
-              </span>
-              <span>
-                Spread <strong>{spread}°C</strong>
-              </span>
-            </span>
+            <div className={styles.miniFacts}>
+              <div>
+                <div className={styles.miniLabel}>Dew</div>
+                <div className={styles.miniValue}>{round(dewpC, 1)}°C</div>
+              </div>
+              <div>
+                <div className={styles.miniLabel}>Spread</div>
+                <div className={styles.miniValue}>{spread}°C</div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className={styles.sub}>Dew point not reported</div>
