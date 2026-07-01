@@ -95,7 +95,7 @@ export function App() {
     if (note) secondary.push({ text: note, severity: fc.severity });
   }
   if (taf && brief) {
-    const note = tafBannerNote(taf, brief.locationTime);
+    const note = tafBannerNote(taf, brief.locationTime, altUnit);
     if (note) secondary.push({ text: note, severity: taf.severity });
   }
 
@@ -165,6 +165,7 @@ export function App() {
             <StationCard brief={brief} now={now} />
             <TafDetailsCard
               taf={tafParsed}
+              summary={taf}
               windUnit={windUnit}
               altUnit={altUnit}
               locationTime={brief.locationTime}

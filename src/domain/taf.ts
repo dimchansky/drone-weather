@@ -257,10 +257,21 @@ export interface TafHazard {
   visM?: number;
 }
 
+/** A time window with the hazard kinds active in it (worst-overlap / whole hazard span). */
+export interface TafWindow {
+  from: Date;
+  to: Date;
+  kinds: TafHazardKind[];
+}
+
 export interface TafSummary {
   available: boolean; // a TAF was parsed
   severity: Severity; // GOOD (no near-term hazard) or CAUTION — advisory only, capped at CAUTION
   hazards: TafHazard[];
+  /** Peak hazard-overlap window (≥2 hazards); null when at most one hazard has a window. */
+  worstWindow: TafWindow | null;
+  /** Earliest hazard start → latest hazard end (the whole hazardous span); null when none timed. */
+  hazardSpan: TafWindow | null;
   partial: boolean; // unsupported tokens were present (check the raw)
   icao: string;
   horizonH: number;
@@ -342,10 +353,54 @@ function aggregateHazards(hazards: TafHazard[]): TafHazard[] {
   return merged.sort((a, b) => HAZARD_ORDER.indexOf(a.kind) - HAZARD_ORDER.indexOf(b.kind));
 }
 
+/** Severity weight for the overlap computation — most decision-relevant kinds weigh more. */
+const hazardWeight = (kind: TafHazardKind): number => HAZARD_ORDER.length - HAZARD_ORDER.indexOf(kind);
+
+type TimedHazard = { from: Date; to: Date; kind: TafHazardKind };
+const timed = (hazards: TafHazard[]): TimedHazard[] =>
+  hazards.filter((h): h is TafHazard & { from: Date; to: Date } => h.from != null && h.to != null)
+    .map((h) => ({ from: h.from, to: h.to, kind: h.kind }));
+
+/** Whole hazardous span: earliest hazard start → latest end. */
+function computeSpan(hazards: TafHazard[]): TafWindow | null {
+  const iv = timed(hazards);
+  if (iv.length === 0) return null;
+  const from = new Date(Math.min(...iv.map((h) => h.from.getTime())));
+  const to = new Date(Math.max(...iv.map((h) => h.to.getTime())));
+  return { from, to, kinds: [...new Set(iv.map((h) => h.kind))] };
+}
+
+/**
+ * Peak hazard-overlap window: the slice of time where the most (weighted) hazards coincide — the
+ * "worst" period to avoid. Sweep-line over hazard interval boundaries; null when <2 hazards overlap.
+ */
+function computeWorstWindow(hazards: TafHazard[]): TafWindow | null {
+  const iv = timed(hazards);
+  if (iv.length < 2) return null;
+  const points = [...new Set(iv.flatMap((h) => [h.from.getTime(), h.to.getTime()]))].sort((a, b) => a - b);
+  let best: TafWindow | null = null;
+  let bestWeight = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (b <= a) continue;
+    const mid = (a + b) / 2;
+    const active = iv.filter((h) => h.from.getTime() <= mid && h.to.getTime() > mid);
+    if (active.length < 2) continue;
+    const weight = active.reduce((s, h) => s + hazardWeight(h.kind), 0);
+    if (weight > bestWeight) {
+      bestWeight = weight;
+      best = { from: new Date(a), to: new Date(b), kinds: active.map((h) => h.kind) };
+    }
+  }
+  return best;
+}
+
 /**
  * Summarize the TAF's near-term hazards (default next 6 h) as an ADVISORY — never NO-FLY, never a
- * verdict driver. Includes any period whose window overlaps [now, now+horizon], then aggregates
- * adjacent same-kind hazards. `partial` mirrors the parser warnings so the UI can flag it.
+ * verdict driver. Includes any period whose window overlaps [now, now+horizon], aggregates adjacent
+ * same-kind hazards, and computes the worst-overlap window + the whole hazardous span so the pilot
+ * can see when it's worst and when it's clear. `partial` mirrors the parser warnings.
  */
 export function summarizeTaf(taf: ParsedTaf, now: Date, opts: { horizonH?: number } = {}): TafSummary {
   const horizonH = opts.horizonH ?? HORIZON_H;
@@ -358,6 +413,8 @@ export function summarizeTaf(taf: ParsedTaf, now: Date, opts: { horizonH?: numbe
     available: taf.periods.length > 0,
     severity: hazards.length ? 'CAUTION' : 'GOOD',
     hazards,
+    worstWindow: computeWorstWindow(hazards),
+    hazardSpan: computeSpan(hazards),
     partial: taf.warnings.length > 0,
     icao: taf.icao,
     horizonH,

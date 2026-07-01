@@ -1,0 +1,49 @@
+.strip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+}
+
+/* Benign one-liner (no hazards). */
+.oneLine {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.header {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.hazards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hazard {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.worst {
+  margin: 6px 0 0;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.partialNote {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--caution);
+}

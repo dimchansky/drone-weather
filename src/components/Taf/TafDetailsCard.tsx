@@ -1,9 +1,9 @@
 import { Card } from '../common/Card';
-import type { ParsedTaf } from '../../domain/taf';
+import type { ParsedTaf, TafSummary } from '../../domain/taf';
 import type { LocationTime } from '../../domain/types';
 import type { WindUnit, AltUnit } from '../../domain/units';
 import { timeSourceLabel } from '../../utils/time';
-import { windowLocalUtc } from './tafText';
+import { windowLocalUtc, worstWindowLine } from './tafText';
 import { periodTypeLabel, periodDetailBits } from './tafDetail';
 import styles from './TafDetailsCard.module.css';
 
@@ -15,16 +15,19 @@ import styles from './TafDetailsCard.module.css';
  */
 export function TafDetailsCard({
   taf,
+  summary,
   windUnit,
   altUnit,
   locationTime,
 }: {
   taf: ParsedTaf | null;
+  summary: TafSummary | null;
   windUnit: WindUnit;
   altUnit: AltUnit;
   locationTime: LocationTime;
 }) {
   if (!taf || taf.periods.length === 0) return null;
+  const worst = summary ? worstWindowLine(summary, locationTime) : null;
 
   return (
     <Card title="TAF details" collapsible defaultOpen={false}>
@@ -32,6 +35,8 @@ export function TafDetailsCard({
         {taf.icao ? `${taf.icao} · ` : ''}airport forecast — not exact conditions at your launch
         point. Times in {timeSourceLabel(locationTime)} (UTC in parentheses).
       </p>
+
+      {worst && <p className={styles.worst}>{worst}</p>}
 
       {taf.warnings.length > 0 && (
         <p className={styles.partial}>TAF parsed partially — check the raw TAF below.</p>

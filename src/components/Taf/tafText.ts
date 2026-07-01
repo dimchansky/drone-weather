@@ -1,18 +1,16 @@
-// Presentation helpers for the TAF summary — turn the structured hazards into plain, non-aviation
-// language: human local-time windows (device-local primary, UTC secondary), jargon expanded
-// (TEMPO → "possible at times", PROB30 → "30% chance", BECMG → "becoming", FM → "from"), same-kind
-// hazards aggregated in the domain, and an explicit "+N more" instead of a bare ellipsis.
+// Presentation helpers for the TAF summary. The compact strip renders a GROUPED, scannable list —
+// one short line per hazard type (all shown, never a bare "+N more"), plus a computed worst-overlap
+// / hazard-span line so the pilot sees when it's worst and when it's clear. Uncertainty is conveyed
+// once (the "airport forecast" label + inline "N% chance"), not repeated as "possible at times".
 
-import type { TafHazard, TafSummary } from '../../domain/taf';
+import type { TafHazard, TafHazardKind, TafSummary } from '../../domain/taf';
 import type { LocationTime } from '../../domain/types';
 import { fmtWindSpeed, fmtAltFt, round, type WindUnit, type AltUnit } from '../../domain/units';
-import { fmtTimeInZone, fmtUtcTime } from '../../utils/time';
-
-const MAX_SHOWN = 3;
+import { fmtTimeInZone, fmtUtcTime, timeSourceLabel } from '../../utils/time';
 
 /**
- * "11:00–13:00 (08:00–10:00 UTC)" — flight-site local time primary, UTC secondary (TAF is native
- * UTC). A single time (to=null, e.g. FM) → "14:00 (14:00 UTC)". Shared with the TAF details card.
+ * "11:00–13:00 (08:00–10:00 UTC)" — flight-site local time primary, UTC secondary. A single time
+ * (to=null, e.g. FM) → "14:00 (14:00 UTC)". Used by the TAF details card.
  */
 export function windowLocalUtc(from: Date | null, to: Date | null, lt: LocationTime): string {
   const l = (d: Date): string => fmtTimeInZone(d, lt);
@@ -22,61 +20,85 @@ export function windowLocalUtc(from: Date | null, to: Date | null, lt: LocationT
   return local ? `${local} (${utc})` : '';
 }
 
-function hazardNoun(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
+/** Local-only window "15:00–00:00" / "from 14:00" (strip + banner; UTC lives in the details card). */
+export function windowLocal(from: Date | null, to: Date | null, lt: LocationTime): string {
+  const l = (d: Date): string => fmtTimeInZone(d, lt);
+  return from && to ? `${l(from)}–${l(to)}` : from ? `from ${l(from)}` : '';
+}
+
+const HAZARD_LABEL: Record<TafHazardKind, string> = {
+  thunderstorm: 'Thunderstorms',
+  lowCeiling: 'Low cloud',
+  lowVis: 'Visibility',
+  gusts: 'Gusts',
+  strongWind: 'Strong wind',
+  rain: 'Rain',
+  snow: 'Snow',
+};
+
+function hazardValue(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
   switch (h.kind) {
-    case 'thunderstorm':
-      return 'thunderstorms';
     case 'lowCeiling':
-      return `low cloud (ceiling ${fmtAltFt(h.ceilingFt ?? 0, altUnit)})`;
+      return `ceiling ${fmtAltFt(h.ceilingFt ?? 0, altUnit)}`;
     case 'lowVis':
-      return `reduced visibility (${round((h.visM ?? 0) / 1000, 1)} km)`;
+      return `down to ${round((h.visM ?? 0) / 1000, 1)} km`;
     case 'gusts':
-      return `gusts to ${fmtWindSpeed(h.gustKt ?? 0, windUnit)}`;
+      return `to ${fmtWindSpeed(h.gustKt ?? 0, windUnit)}`;
     case 'strongWind':
-      return `strong wind ${fmtWindSpeed(h.windKt ?? 0, windUnit)}`;
-    case 'rain':
-      return 'rain';
-    case 'snow':
-      return 'snow';
+      return fmtWindSpeed(h.windKt ?? 0, windUnit);
+    default:
+      return '';
   }
 }
 
-/** A full plain-language hazard phrase, e.g. "thunderstorms possible at times 11:00–17:00 (08:00–14:00 UTC)". */
-export function hazardPhrase(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit, lt: LocationTime): string {
-  const noun = hazardNoun(h, windUnit, altUnit);
-  const win = windowLocalUtc(h.from, h.to, lt);
-
-  if (h.changeType === 'PROB' && h.probPct != null) {
-    const atTimes = h.tempo ? 'at times ' : '';
-    return `${h.probPct}% chance of ${noun} ${atTimes}${win}`.trim();
-  }
-  if (h.changeType === 'TEMPO' || h.tempo) {
-    return `${noun} possible at times ${win}`.trim();
-  }
-  if (h.changeType === 'BECMG') {
-    return win ? `${noun} becoming ${win}` : `${noun} becoming`;
-  }
-  if (h.changeType === 'FM') {
-    return win ? `${noun} from ${win}` : noun;
-  }
-  return win ? `${noun} ${win}` : noun; // BASE (prevailing)
+/** One grouped hazard line: "Thunderstorms — 15:00–00:00", "Low cloud (30% chance) — ceiling 61 m · 23:00–06:00". */
+export function hazardGroupLine(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit, lt: LocationTime): string {
+  const prob = h.changeType === 'PROB' && h.probPct != null ? ` (${h.probPct}% chance)` : '';
+  const label = `${HAZARD_LABEL[h.kind]}${prob}`;
+  const detail = [hazardValue(h, windUnit, altUnit), windowLocal(h.from, h.to, lt)].filter(Boolean).join(' · ');
+  return detail ? `${label} — ${detail}` : label;
 }
 
-/** Compact Layer-2 strip line — plain language, airport-labelled, top few hazards + explicit "+N more". */
-export function tafStripText(s: TafSummary, windUnit: WindUnit, altUnit: AltUnit, lt: LocationTime): string {
-  const label = `TAF ${s.icao}`.trim();
-  const partial = s.partial ? ' · parsed partially — check raw' : '';
-  if (!s.hazards.length) {
-    return `${label} · airport forecast: no significant change next ${s.horizonH} h${partial}`;
+/** The worst-overlap / hazard-span line, e.g. "⚠ Worst ~23:00–00:00 · hazards 15:00–06:00"; null when not useful. */
+export function worstWindowLine(s: TafSummary, lt: LocationTime): string | null {
+  if (s.worstWindow) {
+    const worst = windowLocal(s.worstWindow.from, s.worstWindow.to, lt);
+    const span = s.hazardSpan ? ` · hazards ${windowLocal(s.hazardSpan.from, s.hazardSpan.to, lt)}` : '';
+    return `⚠ Worst ~${worst}${span}`;
   }
-  const shown = s.hazards.slice(0, MAX_SHOWN).map((h) => hazardPhrase(h, windUnit, altUnit, lt));
-  const hidden = s.hazards.length - MAX_SHOWN;
-  const more = hidden > 0 ? ` · +${hidden} more TAF hazard${hidden > 1 ? 's' : ''}` : '';
-  return `${label} · airport forecast: ${shown.join(' · ')}${more}${partial}`;
+  if (s.hazards.length >= 2 && s.hazardSpan) {
+    return `Hazards ${windowLocal(s.hazardSpan.from, s.hazardSpan.to, lt)}`;
+  }
+  return null;
 }
 
-/** Short banner note — only for a forecast thunderstorm (the most decision-relevant); null otherwise. */
-export function tafBannerNote(s: TafSummary, lt: LocationTime): string | null {
-  const ts = s.hazards.find((h) => h.kind === 'thunderstorm');
-  return ts ? `TAF: ${hazardPhrase(ts, 'kt', 'ft', lt)}` : null;
+/** Strip header line: "TAF EYVI · airport forecast · times Europe/Vilnius". */
+export function tafStripHeader(s: TafSummary, lt: LocationTime): string {
+  const icao = s.icao ? `TAF ${s.icao}` : 'TAF';
+  return `${icao} · airport forecast · times ${timeSourceLabel(lt)}`;
+}
+
+const SERIOUS: TafHazardKind[] = ['thunderstorm', 'lowCeiling', 'lowVis'];
+
+/**
+ * Short banner note — the single most important TAF hazard (thunderstorm / low cloud / poor
+ * visibility), one clause, confidence-worded (no repeated "at times"); null when none is serious.
+ */
+export function tafBannerNote(s: TafSummary, lt: LocationTime, altUnit: AltUnit): string | null {
+  const h = s.hazards.find((x) => SERIOUS.includes(x.kind)); // hazards are severity-ordered → first serious = worst
+  if (!h) return null;
+  const noun =
+    h.kind === 'thunderstorm'
+      ? 'thunderstorms'
+      : h.kind === 'lowCeiling'
+        ? `low cloud (ceiling ${fmtAltFt(h.ceilingFt ?? 0, altUnit)})`
+        : `poor visibility (${round((h.visM ?? 0) / 1000, 1)} km)`;
+  const conf =
+    h.changeType === 'PROB' && h.probPct != null
+      ? `${h.probPct}% chance of ${noun}`
+      : h.tempo
+        ? `${noun} possible`
+        : `${noun} expected`;
+  const win = windowLocal(h.from, h.to, lt);
+  return `TAF: ${conf}${win ? ` ${win}` : ''}`;
 }

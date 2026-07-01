@@ -413,11 +413,12 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
   Open-Meteo `timezone=auto`; device-local fallback), zone named; never auto-NO-FLY.
 - `ForecastStrip` — short-term 1–3 h model forecast (`domain/forecast.ts` over the Open-Meteo
   hourly window): wind/gust trend + rain onset. Labelled "model"; CAUTION when notable.
-- `TafStrip` — aviation TAF near-term hazards (`domain/taf.ts` `parseTaf` + `summarizeTaf`):
-  TS/low-ceiling/low-vis/gusts/rain from BASE/FM/BECMG/TEMPO/PROB groups, UTC windows. Labelled
-  **airport forecast** (not the exact launch point); advisory-only (CAUTION cap), kept separate
-  from the model `ForecastStrip`; a `warnings` array flags a partial parse. Raw TAF stays verbatim
-  in the Raw card. Never changes the observed-weather verdict.
+- `TafStrip` — aviation TAF near-term hazards (`domain/taf.ts` `parseTaf` + `summarizeTaf`) as a
+  **grouped mini-list**: one line per hazard type (TS/low-ceiling/low-vis/gusts/rain, all shown —
+  no "+N more"), local-time windows, plus a computed **worstWindow** (peak hazard overlap) +
+  **hazardSpan**. Labelled **airport forecast**; advisory-only (CAUTION cap), separate from the
+  model `ForecastStrip`; `warnings` flags a partial parse; raw TAF stays verbatim. Never changes
+  the observed-weather verdict. The banner note is the single worst serious hazard, one clause.
 - `WindCompass` — SVG compass: **source arrow** + **drift arrow** (opposite) + variable arc;
   speed in all three units; gust; `routeAdvice` (shared with the banner).
 - `VerticalAnalyzer` — SVG chart: altitude axis (focus 0–120 m, toggle to 1000 m),

@@ -41,12 +41,12 @@ sources always labelled; the raw METAR always available verbatim.
 - `ForecastStrip` *(Iteration 3)* — short-term **model** forecast: *"Next 3h (model): wind steady ·
   gusts to 15 kt · no rain expected"* / *"…rain likely in ~45m"*. Colored by the forecast advisory
   (CAUTION when rain/rising wind ahead). Always labelled "model" so it never reads as observed.
-- `TafStrip` — the **aviation TAF** near-term hazards in plain language: *"TAF EDDB · airport
-  forecast: thunderstorms possible at times 11:00–17:00 (08:00–14:00 UTC)"*. Jargon expanded
-  (TEMPO → "possible at times", PROB30 → "30% chance", BECMG → "becoming", FM → "from"); windows are
-  **device-local primary, UTC secondary**; adjacent same-kind hazards are aggregated; overflow shows
-  an explicit "+N more". Labelled airport-forecast (not your exact site), advisory-only. Separate
-  from the model `ForecastStrip`; the raw TAF stays verbatim in the Raw card.
+- `TafStrip` — the **aviation TAF** near-term hazards as a **grouped, scannable mini-list** (one
+  short line per hazard type, **all shown — never a bare "+N more"**) plus a computed
+  **⚠ worst-overlap window + hazard span** ("⚠ Worst ~23:00–00:00 · hazards 15:00–06:00"), so the
+  pilot sees when it's worst and when it's clear. Uncertainty is conveyed once (the "airport
+  forecast" label + inline "N% chance"), not repeated as "possible at times". Local time; UTC lives
+  in the details card. Advisory-only, separate from the model `ForecastStrip`; raw TAF stays verbatim.
 - `DaylightStrip` *(Iteration 2)* — sunrise/sunset · daylight remaining · golden-hour window, or a
   night/twilight advisory. Colored by the daylight severity (CAUTION in twilight/night, never
   NO-FLY). Times are in the **flight-site local time** (Open-Meteo `LocationTime`, device-local

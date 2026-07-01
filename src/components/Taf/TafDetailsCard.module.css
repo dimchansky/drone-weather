@@ -5,6 +5,13 @@
   line-height: 1.4;
 }
 
+.worst {
+  margin: 0 0 10px;
+  font-weight: 600;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .partial {
   margin: 0 0 10px;
   font-size: 0.82rem;

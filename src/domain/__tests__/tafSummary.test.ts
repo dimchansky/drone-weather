@@ -56,6 +56,26 @@ describe('summarizeTaf', () => {
     expect(s.partial).toBe(true);
   });
 
+  it('computes the peak-overlap worst window and the whole hazard span', () => {
+    // TS 12–21Z, low cloud (BKN002) 20–03Z, low vis (3000) 12–03Z → all three overlap 20–21Z.
+    const raw =
+      'TAF EYVI 011000Z 0112/0212 22010KT 9999 SCT030 TEMPO 0112/0121 TSRA BKN020CB TEMPO 0120/0203 0800 BKN002 TEMPO 0112/0203 3000 BR';
+    const s = sum(raw, '2026-07-01T19:00:00Z'); // now inside the overlap band
+    expect(s.hazards.map((h) => h.kind)).toEqual(expect.arrayContaining(['thunderstorm', 'lowCeiling', 'lowVis']));
+    expect(s.worstWindow).not.toBeNull();
+    expect(s.worstWindow!.from.toISOString()).toBe('2026-07-01T20:00:00.000Z');
+    expect(s.worstWindow!.to.toISOString()).toBe('2026-07-01T21:00:00.000Z');
+    expect(s.worstWindow!.kinds).toHaveLength(3);
+    expect(s.hazardSpan!.from.toISOString()).toBe('2026-07-01T12:00:00.000Z');
+    expect(s.hazardSpan!.to.toISOString()).toBe('2026-07-02T03:00:00.000Z');
+  });
+
+  it('has no worst window for a single hazard (but still a span)', () => {
+    const s = sum('TAF EGKK 010500Z 0106/0212 18008KT 6000 OVC004', '2026-07-01T09:00:00Z');
+    expect(s.worstWindow).toBeNull();
+    expect(s.hazardSpan).not.toBeNull();
+  });
+
   it('aggregates two adjacent TEMPO thunderstorm periods into one spanning window', () => {
     const raw =
       'TAF VVTS 010500Z 0106/0212 28012KT 9999 FEW020 TEMPO 0108/0110 TSRA BKN015CB TEMPO 0110/0114 TSRA BKN013CB';

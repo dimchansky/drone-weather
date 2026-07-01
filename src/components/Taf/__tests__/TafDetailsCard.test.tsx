@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TafDetailsCard } from '../TafDetailsCard';
-import { parseTaf } from '../../../domain/taf';
+import { parseTaf, summarizeTaf } from '../../../domain/taf';
 import type { LocationTime } from '../../../domain/types';
 
 const REF = new Date('2026-07-01T08:00:00Z');
@@ -11,13 +11,13 @@ const parse = (raw: string) => parseTaf(raw, { reference: REF });
 
 describe('TafDetailsCard', () => {
   it('renders nothing when there is no TAF', () => {
-    const { container } = render(<TafDetailsCard taf={null} windUnit="kt" altUnit="ft" locationTime={UTC} />);
+    const { container } = render(<TafDetailsCard taf={null} summary={null} windUnit="kt" altUnit="ft" locationTime={UTC} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('renders each period with a human type, local/UTC window, and decoded conditions', () => {
     const taf = parse('TAF EDDB 010800Z 0108/0212 24008KT 9999 SCT035 FM011400 27015G25KT 9999 BKN030 TEMPO 0110/0114 28015G30KT 3000 TSRA BKN013CB');
-    render(<TafDetailsCard taf={taf} windUnit="kt" altUnit="ft" locationTime={PLUS7} />);
+    render(<TafDetailsCard taf={taf} summary={null} windUnit="kt" altUnit="ft" locationTime={PLUS7} />);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('Initial forecast');
     expect(txt).toContain('From');
@@ -29,15 +29,24 @@ describe('TafDetailsCard', () => {
     expect(txt).toContain('airport forecast');
   });
 
+  it('shows the worst-overlap window at the top when the summary has one', () => {
+    const raw =
+      'TAF EYVI 011000Z 0112/0212 22010KT 9999 SCT030 TEMPO 0112/0121 TSRA BKN020CB TEMPO 0120/0203 0800 BKN002 TEMPO 0112/0203 3000 BR';
+    const taf = parse(raw);
+    const summary = summarizeTaf(taf, new Date('2026-07-01T19:00:00Z'));
+    render(<TafDetailsCard taf={taf} summary={summary} windUnit="kt" altUnit="ft" locationTime={UTC} />);
+    expect(screen.getByText(/⚠ Worst ~/)).toBeInTheDocument();
+  });
+
   it('shows the raw group text for a period (accessible verbatim)', () => {
     const taf = parse('TAF EDDB 010800Z 0108/0212 24008KT 9999 SCT035 TEMPO 0110/0114 3000 TSRA');
-    render(<TafDetailsCard taf={taf} windUnit="kt" altUnit="ft" locationTime={UTC} />);
+    render(<TafDetailsCard taf={taf} summary={null} windUnit="kt" altUnit="ft" locationTime={UTC} />);
     expect(screen.getByText('TEMPO 0110/0114 3000 TSRA')).toBeInTheDocument();
   });
 
   it('reacts to unit selection (m/s + metres)', () => {
     const taf = parse('TAF EDDB 010800Z 0108/0212 24008KT 9999 SCT035 TEMPO 0110/0114 28015G30KT BKN013CB');
-    render(<TafDetailsCard taf={taf} windUnit="ms" altUnit="m" locationTime={UTC} />);
+    render(<TafDetailsCard taf={taf} summary={null} windUnit="ms" altUnit="m" locationTime={UTC} />);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('gusts to 15.4 m/s');
     expect(txt).toContain('broken 396 m');
@@ -46,7 +55,7 @@ describe('TafDetailsCard', () => {
   it('shows a partial-parse note (not an error) when the parser recorded warnings', () => {
     const taf = parse('TAF EDDB 010800Z 0108/0212 24008KT 9999 SCT035 WS020/24045KT');
     expect(taf.warnings.length).toBeGreaterThan(0);
-    render(<TafDetailsCard taf={taf} windUnit="kt" altUnit="ft" locationTime={UTC} />);
+    render(<TafDetailsCard taf={taf} summary={null} windUnit="kt" altUnit="ft" locationTime={UTC} />);
     expect(screen.getByText(/parsed partially/i)).toBeInTheDocument();
   });
 });
