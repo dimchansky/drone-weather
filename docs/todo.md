@@ -90,11 +90,11 @@
 - [x] Iteration 3 — short-term 1–3 h forecast (`domain/forecast.ts` + ForecastStrip)
 
 ### Next up (prioritized 2026-07-01)
-- [ ] **1. Dedicated precipitation risk** — first-class rain/drizzle/snow risk factor (own
-      `RiskFactors` row + verdict contribution); split `precipRisk` out of `moistureRisk`
-      (no double-count); integrate with `PrecipNowPill` + forecast; source-labelled.
-- [ ] **2. TAF parsing** — decode raw TAF (change groups, TEMPO/BECMG/PROB) as a longer-range source.
-- [ ] **3. True location timezone** — coordinate→IANA-tz lookup (daylight/forecast times are
+- [x] **Dedicated precipitation risk** — `precipRisk` is a first-class weather factor (own
+      `RiskFactors` row before Moisture + verdict/Main-issue contribution); split out of
+      `moistureRisk` (no double-count); shares thresholds/labels with `PrecipNowPill`; source-labelled.
+- [ ] **1. TAF parsing** — decode raw TAF (change groups, TEMPO/BECMG/PROB) as a longer-range source.
+- [ ] **2. True location timezone** — coordinate→IANA-tz lookup (daylight/forecast times are
       device-local today, labelled).
 
 ## Backlog / later (see idea doc §13)

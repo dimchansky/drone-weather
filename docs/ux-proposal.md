@@ -33,8 +33,8 @@ sources always labelled; the raw METAR always available verbatim.
 - `PrecipNowPill` — is it (going to be) wet? Source-explicit: *"No precipitation reported now"* /
   *"METAR: rain now"* / *"Model: rain likely"* / *"Model: 70% precip chance"*. A model probability
   never reads as observed.
-- `RiskFactors` — the six weather factors (wind, gust, visibility, moisture, ceiling, icing), each
-  with its own reason. Never a black box.
+- `RiskFactors` — the seven weather factors (wind, gust, visibility, **precipitation**, moisture,
+  ceiling, icing), each with its own reason. Never a black box.
 - `VerticalHazardStrip` — the ops-band conclusion in one line (*"Ops band 0–120 m: low vertical
   hazard · cloud base above ops ceiling"*), so the app's unique vertical signal stays visible even
   though the full chart is collapsed below.
@@ -83,17 +83,18 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   (wind/gust trend + rain onset), a Layer-2 `ForecastStrip` + a banner note when notable. Model
   forecast, labelled as such; the observed METAR still drives the verdict.
 
+- **Dedicated precipitation risk (done 2026-07-01):** `precipRisk` (`domain/risk.ts`) is a
+  first-class weather factor — rain/drizzle/snow, freezing precip, thunderstorm (METAR), else model
+  amount/probability — its own `RiskFactors` row **before** Moisture, and it can be the banner's
+  "Main issue". Split out of `moistureRisk` (which now owns fog/dew/near-saturation only → no
+  double-count); shares the type label + thresholds with `PrecipNowPill`; source-labelled (METAR vs
+  model).
+
 ### Next up (prioritized)
 
-1. **Dedicated precipitation risk** *(next)* — make rain/drizzle/snow a **first-class risk factor**
-   with its own `RiskFactors` row and its own contribution to the verdict, rather than only being
-   folded into "Moisture & wetness" or shown as the precip-now pill. Split a `precipRisk` component
-   out of `moistureRisk` (moisture then covers fog/dew/near-saturation only, no double-count); keep
-   it integrated with the existing `PrecipNowPill` and the forecast so precipitation is an obvious,
-   standalone decision factor. Source-labelled (observed METAR vs model).
-2. **TAF parsing** — decode the raw TAF (change groups, TEMPO/BECMG/PROB) as a richer, longer-range
-   forecast source that complements the Open-Meteo hourly trend.
-3. **True location timezone** — a coordinate→IANA-tz lookup so daylight/forecast times are correct
+1. **TAF parsing** *(next)* — decode the raw TAF (change groups, TEMPO/BECMG/PROB) as a richer,
+   longer-range forecast source that complements the Open-Meteo hourly trend.
+2. **True location timezone** — a coordinate→IANA-tz lookup so daylight/forecast times are correct
    for distant sites (they render **device-local** today, clearly labelled; fine near the flight
    site, which is the primary use case).
 

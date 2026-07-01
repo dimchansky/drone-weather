@@ -394,8 +394,10 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 - `DecisionBanner` — big status chip (GOOD/CAUTION/HIGH/NOFLY) + single **Main issue** (dominant
   weather driver + magnitude, hidden when GOOD) + short hedged **advice** + `uncertain` badge.
   Reads `RiskSummary.primary`/`advice` (derived in `assessRisk`).
-- `RiskFactors` — the six weather component rows (wind, gust, visibility, moisture, ceiling,
-  icing), each with its reason. Freshness/distance are shown by `StatusStrip`, not here.
+- `RiskFactors` — the seven weather component rows (wind, gust, visibility, **precipitation**,
+  moisture, ceiling, icing), each with its reason. Freshness/distance are shown by `StatusStrip`,
+  not here. `precipRisk` owns rain/drizzle/snow/freezing-precip/thunderstorm (METAR) or model
+  amount/probability; `moistureRisk` owns fog/dew/near-saturation only (no double-count).
 - `StatusStrip` — one-line data confidence: station · distance · METAR age · fetch time · QNH
   (hPa + inHg, **METAR only** — never synthesized for a model-only brief). Colored by confidence.
 - `PrecipNowPill` — source-explicit precip-now (`precipNow`): "No precipitation reported now" /
