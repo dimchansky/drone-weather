@@ -18,7 +18,6 @@ import { DecisionBanner } from './components/Risk/DecisionBanner';
 import { RiskFactors } from './components/Risk/RiskFactors';
 import { StatusStrip } from './components/Status/StatusStrip';
 import { PrecipNowPill } from './components/Precip/PrecipNowPill';
-import { DaylightStrip } from './components/Daylight/DaylightStrip';
 import { daylightBannerLine } from './components/Daylight/daylightText';
 import { ForecastStrip } from './components/Forecast/ForecastStrip';
 import { forecastBannerNote } from './components/Forecast/forecastText';
@@ -26,7 +25,6 @@ import { TafStrip } from './components/Taf/TafStrip';
 import { TafDetailsCard } from './components/Taf/TafDetailsCard';
 import { tafBannerNote } from './components/Taf/tafText';
 import type { SecondaryLine } from './components/Risk/DecisionBanner';
-import { WindCompass } from './components/Wind/WindCompass';
 import { StationCard } from './components/Station/StationCard';
 import { VerticalAnalyzer } from './components/Vertical/VerticalAnalyzer';
 import { VerticalHazardStrip } from './components/Vertical/VerticalHazardStrip';
@@ -143,7 +141,8 @@ export function App() {
             <PrecipNowPill precip={precipNow(brief.metar, brief.model)} />
             {fc && <ForecastStrip forecast={fc} windUnit={windUnit} />}
             {taf && <TafStrip summary={taf} windUnit={windUnit} altUnit={altUnit} locationTime={brief.locationTime} />}
-            {dl && <DaylightStrip daylight={dl} locationTime={brief.locationTime} />}
+            {/* Daylight and wind now live in the OverviewGrid tiles (DaylightStrip/WindCompass
+                components stay in-tree in case the tiles need to be swapped back). */}
             <RiskFactors risk={liveRisk ?? brief.risk} />
             <VerticalHazardStrip
               hazard={opsBandHazard(
@@ -153,7 +152,6 @@ export function App() {
                 altUnit,
               )}
             />
-            <WindCompass wind={brief.metar.wind} />
 
             {/* Layer 3 — technical detail (collapsed by default) */}
             <VerticalAnalyzer brief={brief} />
