@@ -1,0 +1,16 @@
+{
+  "name": "parser-libraries-spike",
+  "private": true,
+  "type": "module",
+  "description": "Isolated research sandbox to evaluate 3rd-party METAR/TAF parsers vs our in-house parser. NOT part of the production app (separate package.json + node_modules). See ../../docs/parser-library-research.md.",
+  "scripts": {
+    "spike": "tsx spike.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  },
+  "dependencies": {
+    "@squawk/weather": "^0.6.0",
+    "metar-taf-parser": "^9.1.1"
+  }
+}

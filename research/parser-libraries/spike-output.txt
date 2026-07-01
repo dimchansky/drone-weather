@@ -1,0 +1,148 @@
+
+> spike
+> tsx spike.ts
+
+
+========== METAR ==========
+
+### plain SM+altimeter
+    KMCI 011253Z 19017KT 10SM 26/22 A2971
+  ours: icao=KMCI wind=190° 17kt visM=10000 cavok=· wx=[] clouds=[] T/Td=26/22 qnhHpa=1006.1
+  lib : station=KMCI wind=190° 17KT vis=10SM cavok=· wx=[] clouds=[] T/Td=26/22 alt=29.71inHg flags=· cbCloud=·
+
+### CAVOK
+    EYVI 011200Z 22010KT CAVOK 20/09 Q1019
+  ours: icao=EYVI wind=220° 10kt visM=10000 cavok=Y wx=[] clouds=[] T/Td=20/9 qnhHpa=1019
+  lib : station=EYVI wind=220° 10KT vis=P9999m cavok=Y wx=[] clouds=[] T/Td=20/9 alt=1019hPa flags=· cbCloud=·
+
+### SCT/BKN/OVC
+    EGLL 011220Z 24012KT 9999 SCT038 BKN050 OVC070 12/06 Q1015
+  ours: icao=EGLL wind=240° 12kt visM=10000 cavok=· wx=[] clouds=[SCT3800 BKN5000 OVC7000] T/Td=12/6 qnhHpa=1015
+  lib : station=EGLL wind=240° 12KT vis=P9999m cavok=· wx=[] clouds=[SCT3800 BKN5000 OVC7000] T/Td=12/6 alt=1015hPa flags=· cbCloud=·
+
+### CB
+    LSZH 011220Z 20004KT 150V280 9999 FEW035 FEW040CB 23/14 Q1022
+  ours: icao=LSZH wind=VRB 4kt var 150/280 visM=10000 cavok=· wx=[] clouds=[FEW3500 FEW4000/CB] T/Td=23/14 qnhHpa=1022
+  lib : station=LSZH wind=200° 4KT var 150/280 vis=P9999m cavok=· wx=[] clouds=[FEW3500 FEW4000/CB] T/Td=23/14 alt=1022hPa flags=· cbCloud=Y
+
+### TCU
+    SBCH 011500Z 09006KT 8000 FEW006 BKN030 FEW040TCU BKN070 19/19 Q1017
+  ours: icao=SBCH wind=90° 6kt visM=8000 cavok=· wx=[] clouds=[FEW600 BKN3000 FEW4000/TCU BKN7000] T/Td=19/19 qnhHpa=1017
+  lib : station=SBCH wind=90° 6KT vis=8000m cavok=· wx=[] clouds=[FEW600 BKN3000 FEW4000/TCU BKN7000] T/Td=19/19 alt=1017hPa flags=· cbCloud=·
+
+### TSRA (heavy)
+    KMCI 011253Z 18015G25KT 3SM +TSRA BKN008CB 22/21 A2985
+  ours: icao=KMCI wind=180° 15G25kt visM=4828 cavok=· wx=[+TSRA] clouds=[BKN800/CB] T/Td=22/21 qnhHpa=1010.8
+  lib : station=KMCI wind=180° 15G25KT vis=3SM cavok=· wx=[+TSRA] clouds=[BKN800/CB] T/Td=22/21 alt=29.85inHg flags=· cbCloud=Y
+
+### freezing precip
+    CYYZ 011200Z 09012KT 1/2SM FZRA BR VV004 M01/M02 A2980
+  ours: icao=CYYZ wind=90° 12kt visM=805 cavok=· wx=[FZRA,BR] clouds=[VV400] T/Td=-1/-2 qnhHpa=1009.1
+  lib : station=CYYZ wind=90° 12KT vis=0.5SM cavok=· wx=[FZRA,BR] clouds=[] VV400 T/Td=-1/-2 alt=29.8inHg flags=· cbCloud=·
+
+### fog/mist
+    EGLL 010350Z 00000KT 0300 FG SCT001 08/08 Q1020
+  ours: icao=EGLL wind=0° 0kt visM=300 cavok=· wx=[FG] clouds=[SCT100] T/Td=8/8 qnhHpa=1020
+  lib : station=EGLL wind=0° 0KT vis=300m cavok=· wx=[FG] clouds=[SCT100] T/Td=8/8 alt=1020hPa flags=· cbCloud=·
+
+### variable wind + gust
+    EHAM 011225Z VRB03G18KT 6000 -RA SCT012 14/12 Q1008
+  ours: icao=EHAM wind=VRB 3G18kt visM=6000 cavok=· wx=[-RA] clouds=[SCT1200] T/Td=14/12 qnhHpa=1008
+  lib : station=EHAM wind=VRB 3G18KT vis=6000m cavok=· wx=[-RA] clouds=[SCT1200] T/Td=14/12 alt=1008hPa flags=· cbCloud=·
+
+### low vis (m) + NDV
+    EDDF 011220Z 04008KT 1200NDV BR OVC002 05/05 Q1013
+  ours: icao=EDDF wind=40° 8kt visM=1200 cavok=· wx=[BR] clouds=[OVC200] T/Td=5/5 qnhHpa=1013
+  lib : station=EDDF wind=40° 8KT vis=1200m NDV cavok=· wx=[BR] clouds=[OVC200] T/Td=5/5 alt=1013hPa flags=· cbCloud=·
+
+### MPS wind
+    UUEE 011230Z 27006MPS 9999 BKN020 15/10 Q1009
+  ours: icao=UUEE wind=270° 11.7kt visM=10000 cavok=· wx=[] clouds=[BKN2000] T/Td=15/10 qnhHpa=1009
+  lib : station=UUEE wind=270° 6MPS vis=P9999m cavok=· wx=[] clouds=[BKN2000] T/Td=15/10 alt=1009hPa flags=· cbCloud=·
+
+### auto ///markers
+    ESSA 011220Z AUTO 30015G27KT 9999 BKN014/// //////CB 08/05 Q0998
+  ours: icao=ESSA wind=300° 15G27kt visM=10000 cavok=· wx=[] clouds=[BKN1400] T/Td=8/5 qnhHpa=998
+  lib : station=ESSA wind=300° 15G27KT vis=P9999m cavok=· wx=[] clouds=[BKN1400] T/Td=8/5 alt=998hPa flags=auto cbCloud=·
+
+
+========== TAF ==========
+
+### FM
+    TAF EDDB 010800Z 0109/0209 24008KT 9999 SCT035 FM011400 27015G25KT 9999 BKN030
+  ours periods (2), warnings=[]:
+     [BASE] 07-01T09:00→07-02T09:00 wind=240° 8kt visM=10000 wx=[] clouds=[SCT3500]
+     [FM] 07-01T14:00→· wind=270° 15G25kt visM=10000 wx=[] clouds=[BKN3000]
+  lib base: wind=240° 8KT vis=P9999m clouds=[SCT3500] wx=[] validity=1/9→2/9
+  lib maxT/minT=·/· icing=0 turb=0 windShear(base)=·
+     [FM] FM 1/14:0 wind=270° 15G25KT vis=P9999m clouds=[BKN3000] wx=[] ws=· raw="FM011400 27015G25KT 9999 BKN030"
+
+### BECMG
+    TAF EHAM 010500Z 0106/0212 21010KT 9999 SCT030 BECMG 0108/0110 24016G28KT
+  ours periods (2), warnings=[]:
+     [BASE] 07-01T06:00→07-02T12:00 wind=210° 10kt visM=10000 wx=[] clouds=[SCT3000]
+     [BECMG] 07-01T08:00→07-01T10:00 wind=240° 16G28kt visM=· wx=[] clouds=[]
+  lib base: wind=210° 10KT vis=P9999m clouds=[SCT3000] wx=[] validity=1/6→2/12
+  lib maxT/minT=·/· icing=0 turb=0 windShear(base)=·
+     [BECMG] 1/8→1/10 wind=240° 16G28KT vis=· clouds=[] wx=[] ws=· raw="BECMG 0108/0110 24016G28KT"
+
+### TEMPO + TSRA + CB
+    TAF VVTS 010500Z 0106/0212 28012KT 9999 FEW020 TEMPO 0108/0110 TSRA BKN015CB
+  ours periods (2), warnings=[]:
+     [BASE] 07-01T06:00→07-02T12:00 wind=280° 12kt visM=10000 wx=[] clouds=[FEW2000]
+     [TEMPO·tempo] 07-01T08:00→07-01T10:00 wind=· visM=· wx=[TSRA] clouds=[BKN1500CB]
+  lib base: wind=280° 12KT vis=P9999m clouds=[FEW2000] wx=[] validity=1/6→2/12
+  lib maxT/minT=·/· icing=0 turb=0 windShear(base)=·
+     [TEMPO] 1/8→1/10 wind=none vis=· clouds=[BKN1500/CB] wx=[TSRA] ws=· raw="TEMPO 0108/0110 TSRA BKN015CB"
+
+### PROB30 TEMPO
+    TAF KMCI 011130Z 0112/0212 18010KT P6SM SCT040 PROB30 TEMPO 0118/0122 TSRA BKN025CB
+  ours periods (2), warnings=[]:
+     [BASE] 07-01T12:00→07-02T12:00 wind=180° 10kt visM=10000 wx=[] clouds=[SCT4000]
+     [PROB30·tempo] 07-01T18:00→07-01T22:00 wind=· visM=· wx=[TSRA] clouds=[BKN2500CB]
+  lib base: wind=180° 10KT vis=P6SM clouds=[SCT4000] wx=[] validity=1/12→2/12
+  lib maxT/minT=·/· icing=0 turb=0 windShear(base)=·
+     [TEMPO PROB30] 1/18→1/22 wind=none vis=· clouds=[BKN2500/CB] wx=[TSRA] ws=· raw="PROB30 TEMPO 0118/0122 TSRA BKN025CB"
+
+### WS + TX/TN (our warnings)
+    TAF KDEN 011130Z 0112/0212 27015KT P6SM SCT100 WS020/23045KT TX35/0122Z TNM01/0210Z
+  ours periods (1), warnings=[WS020/23045KT TX35/0122Z TNM01/0210Z]:
+     [BASE] 07-01T12:00→07-02T12:00 wind=270° 15kt visM=10000 wx=[] clouds=[SCT10000]
+  lib base: wind=270° 15KT vis=P6SM clouds=[SCT10000] wx=[] validity=1/12→2/12
+  lib maxT/minT=35/-1 icing=0 turb=0 windShear(base)=Y
+
+### multi-hazard
+    TAF EYVI 011000Z 0112/0212 22010KT 9999 SCT030 TEMPO 0112/0121 TSRA BKN020CB TEMPO 0120/0203 0800 BKN002 TEMPO 0112/0203 3000 BR
+  ours periods (4), warnings=[]:
+     [BASE] 07-01T12:00→07-02T12:00 wind=220° 10kt visM=10000 wx=[] clouds=[SCT3000]
+     [TEMPO·tempo] 07-01T12:00→07-01T21:00 wind=· visM=· wx=[TSRA] clouds=[BKN2000CB]
+     [TEMPO·tempo] 07-01T20:00→07-02T03:00 wind=· visM=800 wx=[] clouds=[BKN200]
+     [TEMPO·tempo] 07-01T12:00→07-02T03:00 wind=· visM=3000 wx=[BR] clouds=[]
+  lib base: wind=220° 10KT vis=P9999m clouds=[SCT3000] wx=[] validity=1/12→2/12
+  lib maxT/minT=·/· icing=0 turb=0 windShear(base)=·
+     [TEMPO] 1/12→1/21 wind=none vis=· clouds=[BKN2000/CB] wx=[TSRA] ws=· raw="TEMPO 0112/0121 TSRA BKN020CB"
+     [TEMPO] 1/20→2/3 wind=none vis=800m clouds=[BKN200] wx=[] ws=· raw="TEMPO 0120/0203 0800 BKN002"
+     [TEMPO] 1/12→2/3 wind=none vis=3000m clouds=[] wx=[BR] ws=· raw="TEMPO 0112/0203 3000 BR"
+
+
+========== ROBUSTNESS (does it throw where we degrade?) ==========
+
+  "KMCI 011253Z 19017KT 10SM 26/22 A2971 RERA WSHFT"
+     ours: OK (no throw)
+     lib : OK (no throw)
+  "GARBAGE not a metar at all"
+     ours: OK (no throw)
+     lib : OK (no throw)
+  "EGLL 011220Z 24012KT 9999 SCT038 QQQ999 12/06 Q1"
+     ours: OK (no throw)
+     lib : OK (no throw)
+  "TAF EGLL 010500Z 0106/0212 22010KT 9999 SCT035 F"
+     ours: OK (no throw)
+     lib : OK (no throw)
+  ""
+     ours: OK (no throw)
+     lib : ⚠️ threw InvalidWeatherStatementError: Invalid weather string
+  "METAR"
+     ours: OK (no throw)
+     lib : ⚠️ threw InvalidWeatherStatementError: Invalid weather string
+

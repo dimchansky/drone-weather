@@ -1,0 +1,60 @@
+(node:33897) ExperimentalWarning: Support for loading ES Module in require() is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+===== @squawk/weather METAR =====
+
+### CAVOK
+    EYVI 011200Z 22010KT CAVOK 20/09 Q1019
+  sq: station=EYVI wind=220° 10kt vis=sm·/m· cavok=true wx=[] clouds=[] T/Td=20/9 alt=hPa1019/inHg· cat=VFR
+
+### CB
+    LSZH 011220Z 20004KT 150V280 9999 FEW035 FEW040CB 23/14 Q1022
+  sq: station=LSZH wind=200° 4kt var 150/280 vis=sm·/m9999 cavok=false wx=[] clouds=[FEW3500 FEW4000/CB] T/Td=23/14 alt=hPa1022/inHg· cat=·
+
+### TCU
+    SBCH 011500Z 09006KT 8000 FEW006 BKN030 FEW040TCU BKN070 19/19 Q1017
+  sq: station=SBCH wind=90° 6kt vis=sm·/m8000 cavok=false wx=[] clouds=[FEW600 BKN3000 FEW4000/TCU BKN7000] T/Td=19/19 alt=hPa1017/inHg· cat=MVFR
+
+### FZRA+VV
+    CYYZ 011200Z 09012KT 1/2SM FZRA BR VV004 M01/M02 A2980
+  sq: station=CYYZ wind=90° 12kt vis=sm0.5/m· cavok=false wx=[FZRA,BR] clouds=[] VV400 T/Td=-1/-2 alt=hPa·/inHg29.8 cat=LIFR
+
+### MPS wind
+    UUEE 011230Z 27006MPS 9999 BKN020 15/10 Q1009
+  sq: station=UUEE wind=· vis=sm·/m· cavok=false wx=[] clouds=[] T/Td=·/· alt=hPa·/inHg· cat=·
+
+### auto ///
+    ESSA 011220Z AUTO 30015G27KT 9999 BKN014/// //////CB 08/05 Q0998
+  sq: station=ESSA wind=300° 15G27kt vis=sm·/m9999 cavok=false wx=[] clouds=[] T/Td=·/· alt=hPa·/inHg· cat=·
+
+
+===== @squawk/weather TAF =====
+
+### PROB30 TEMPO
+    TAF KMCI 011130Z 0112/0212 18010KT P6SM SCT040 PROB30 TEMPO 0118/0122 TSRA BKN025CB
+  validity={"day":1,"hour":12,"minute":0} maxT=· minT=·
+     [·] undefined→undefined wind=180° 10kt vis=m·/sm6 wx=[] clouds=[SCT4000] ws=· icing=0
+     [TEMPO PROB30] {"day":1,"hour":18,"minute":0}→{"day":1,"hour":22,"minute":0} wind=· vis=m·/sm· wx=[TSRA] clouds=[BKN2500CB] ws=· icing=0
+
+### WS + TX/TN
+    TAF KDEN 011130Z 0112/0212 27015KT P6SM SCT100 WS020/23045KT TX35/0122Z TNM01/0210Z
+  validity={"day":1,"hour":12,"minute":0} maxT=· minT=·
+     [·] undefined→undefined wind=270° 15kt vis=m·/sm6 wx=[] clouds=[SCT10000] ws=Y icing=0
+
+### multi-hazard
+    TAF EYVI 011000Z 0112/0212 22010KT 9999 SCT030 TEMPO 0112/0121 TSRA BKN020CB TEMPO 0120/0203 0800 BKN002 TEMPO 0112/0203 3000 BR
+  validity={"day":1,"hour":12,"minute":0} maxT=· minT=·
+     [·] undefined→undefined wind=220° 10kt vis=m9999/sm· wx=[] clouds=[SCT3000] ws=· icing=0
+     [TEMPO] {"day":1,"hour":12,"minute":0}→{"day":1,"hour":21,"minute":0} wind=· vis=m·/sm· wx=[TSRA] clouds=[BKN2000CB] ws=· icing=0
+     [TEMPO] {"day":1,"hour":20,"minute":0}→{"day":2,"hour":3,"minute":0} wind=· vis=m800/sm· wx=[] clouds=[BKN200] ws=· icing=0
+     [TEMPO] {"day":1,"hour":12,"minute":0}→{"day":2,"hour":3,"minute":0} wind=· vis=m3000/sm· wx=[BR] clouds=[] ws=· icing=0
+
+
+===== ROBUSTNESS =====
+
+  "FIMP 191000Z 04006KT 4000E -SHRA FEW015 BKN080 24/22"  ->  OK (no throw)
+  "GARBAGE not a metar"  ->  ⚠️ threw Error: Invalid observation time: not
+  ""  ->  ⚠️ threw TypeError: Cannot read properties of undefined (reading 'match')
+  "METAR"  ->  ⚠️ threw TypeError: Cannot read properties of undefined (reading 'match')
+  "TAF EGLL 010500Z 0106/0212 22010KT 9999 SCT035 FOOBA"  ->  OK (no throw)
+
