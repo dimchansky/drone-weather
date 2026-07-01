@@ -2,7 +2,7 @@
 // Designed to never throw: unknown tokens are ignored, the raw text is always kept.
 // See docs/spec.md §4.3 and docs/initial-idea.md §7.1.
 
-import type { CloudCover, Coord, Metar, Weather, Wind } from './types';
+import type { CloudCover, CloudLayer, Coord, Metar, Weather, Wind } from './types';
 import { makeCloudLayer } from './clouds';
 import { msToKt, kmhToKt, inhgToHpa } from './units';
 
@@ -28,11 +28,12 @@ const PRECIP = new Set(['DZ', 'RA', 'SN', 'SG', 'IC', 'PL', 'GR', 'GS', 'UP']);
 
 const ICAO_RE = /^[A-Z][A-Z0-9]{3}$/;
 const OBS_TIME_RE = /^(\d{6})Z$/;
-const WIND_RE = /^(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?(KT|MPS|KMH)$/;
-const VAR_RE = /^(\d{3})V(\d{3})$/;
-const VIS_M_RE = /^(\d{4})(?:NDV)?$/;
-const VIS_SM_RE = /^(M|P)?(\d{1,2})(?:\/(\d{1,2}))?SM$/;
-const FRACTION_SM_RE = /^(\d{1,2})\/(\d{1,2})SM$/;
+// Shared token patterns/parsers — also reused by the TAF parser (domain/taf.ts).
+export const WIND_RE = /^(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?(KT|MPS|KMH)$/;
+export const VAR_RE = /^(\d{3})V(\d{3})$/;
+export const VIS_M_RE = /^(\d{4})(?:NDV)?$/;
+export const VIS_SM_RE = /^(M|P)?(\d{1,2})(?:\/(\d{1,2}))?SM$/;
+export const FRACTION_SM_RE = /^(\d{1,2})\/(\d{1,2})SM$/;
 const RVR_RE = /^R\d{2}[LCR]?\//;
 // A trailing `///` is an automated station's "cloud type unavailable" marker
 // (e.g. FEW024///). Allow it so the base height is still captured; type → none.
@@ -44,7 +45,7 @@ const ALTIM_RE = /^A(\d{4})$/;
 const signed = (s: string): number =>
   s.startsWith('M') ? -parseInt(s.slice(1), 10) : parseInt(s, 10);
 
-function parseWind(m: RegExpMatchArray): Wind {
+export function parseWind(m: RegExpMatchArray): Wind {
   const [, dir, spd, gust, unit] = m;
   const toKt = (v: number): number =>
     unit === 'MPS' ? msToKt(v) : unit === 'KMH' ? kmhToKt(v) : v;
@@ -60,7 +61,7 @@ function parseWind(m: RegExpMatchArray): Wind {
   };
 }
 
-function parseWeatherToken(tok: string): Weather | null {
+export function parseWeatherToken(tok: string): Weather | null {
   let s = tok;
   let intensity: '-' | '+' | '' = '';
   if (s.startsWith('+')) {
@@ -85,6 +86,16 @@ function parseWeatherToken(tok: string): Weather | null {
   if (s.length !== 0) return null; // leftover characters -> not a clean weather group
   if (descriptor === undefined && phenomena.length === 0) return null;
   return { raw: tok, intensity, descriptor, phenomena };
+}
+
+/** Parse a single cloud token (sky-clear code or `COVERbbb[CB|TCU]`) → CloudLayer, else null. */
+export function parseCloudToken(tok: string): CloudLayer | null {
+  if (SKY_CLEAR.has(tok)) return makeCloudLayer(tok as CloudCover, null);
+  const m = tok.match(CLOUD_RE);
+  if (!m) return null;
+  const cover = m[1] as CloudCover;
+  const baseFt = m[2] === '///' ? null : parseInt(m[2], 10) * 100;
+  return makeCloudLayer(cover, baseFt, { cb: m[3] === 'CB', tcu: m[3] === 'TCU' });
 }
 
 function resolveObsTime(ddhhmm: string, now: Date): Date {
@@ -199,16 +210,9 @@ export function parseMetar(raw: string, opts: ParseMetarOptions = {}): Metar {
       continue;
     }
 
-    if (SKY_CLEAR.has(tok)) {
-      metar.clouds.push(makeCloudLayer(tok as CloudCover, null));
-      continue;
-    }
-    if ((m = tok.match(CLOUD_RE))) {
-      const cover = m[1] as CloudCover;
-      const baseFt = m[2] === '///' ? null : parseInt(m[2], 10) * 100;
-      metar.clouds.push(
-        makeCloudLayer(cover, baseFt, { cb: m[3] === 'CB', tcu: m[3] === 'TCU' }),
-      );
+    const cloud = parseCloudToken(tok);
+    if (cloud) {
+      metar.clouds.push(cloud);
       continue;
     }
 
@@ -239,21 +243,24 @@ export function parseMetar(raw: string, opts: ParseMetarOptions = {}): Metar {
   return metar;
 }
 
-// ----- weather-phenomenon predicates (used by icing & risk) -----
-export const hasFog = (m: Metar): boolean => m.weather.some((w) => w.phenomena.includes('FG'));
-export const hasMist = (m: Metar): boolean => m.weather.some((w) => w.phenomena.includes('BR'));
-export const hasSnow = (m: Metar): boolean => m.weather.some((w) => w.phenomena.includes('SN'));
-export const hasPrecip = (m: Metar): boolean =>
+// ----- weather-phenomenon predicates (used by icing, risk, and the TAF summarizer) -----
+// Typed structurally so they work on both a full Metar and a TAF period (both carry weather+clouds).
+export type WeatherFields = { weather: Weather[]; clouds: CloudLayer[] };
+
+export const hasFog = (m: WeatherFields): boolean => m.weather.some((w) => w.phenomena.includes('FG'));
+export const hasMist = (m: WeatherFields): boolean => m.weather.some((w) => w.phenomena.includes('BR'));
+export const hasSnow = (m: WeatherFields): boolean => m.weather.some((w) => w.phenomena.includes('SN'));
+export const hasPrecip = (m: WeatherFields): boolean =>
   m.weather.some((w) => w.phenomena.some((p) => PRECIP.has(p)));
-export const hasFreezing = (m: Metar): boolean => m.weather.some((w) => w.descriptor === 'FZ');
-export const hasFreezingFog = (m: Metar): boolean =>
+export const hasFreezing = (m: WeatherFields): boolean => m.weather.some((w) => w.descriptor === 'FZ');
+export const hasFreezingFog = (m: WeatherFields): boolean =>
   m.weather.some((w) => w.descriptor === 'FZ' && w.phenomena.includes('FG'));
-export const hasFreezingPrecip = (m: Metar): boolean =>
+export const hasFreezingPrecip = (m: WeatherFields): boolean =>
   m.weather.some(
     (w) => w.descriptor === 'FZ' && (w.phenomena.includes('RA') || w.phenomena.includes('DZ')),
   );
-export const hasThunderstorm = (m: Metar): boolean =>
+export const hasThunderstorm = (m: WeatherFields): boolean =>
   m.weather.some((w) => w.descriptor === 'TS') || m.clouds.some((c) => c.cb);
 
-/** Number of cloud layers reported as CB or TCU. */
-export const hasConvectiveCloud = (m: Metar): boolean => m.clouds.some((c) => c.cb || c.tcu);
+/** Whether any cloud layer is reported as CB or TCU. */
+export const hasConvectiveCloud = (m: WeatherFields): boolean => m.clouds.some((c) => c.cb || c.tcu);

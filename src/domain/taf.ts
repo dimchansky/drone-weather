@@ -1,0 +1,322 @@
+// TAF (Terminal Aerodrome Forecast) parser — pure, MVP. Parses the raw TAF text into change
+// periods, reusing the METAR token parsers (wind/visibility/weather/clouds). Designed to NEVER
+// throw: unsupported or unknown tokens (WS, TX/TN, turbulence/icing groups, junk) are recorded in
+// `warnings` so the UI can flag a partial parse and point the pilot at the verbatim raw TAF.
+//
+// Scope (MVP): BASE, FM, BECMG, TEMPO, PROB / PROB TEMPO; wind + gusts, visibility, weather,
+// clouds/ceiling, CAVOK. Times are UTC (aviation convention). Out of scope: temps (TX/TN), wind
+// shear (WS), turbulence/icing groups — all flow into `warnings`.
+
+import type { CloudLayer, Severity, Weather, Wind } from './types';
+import { ceilingFt } from './clouds';
+import {
+  WIND_RE,
+  VAR_RE,
+  VIS_M_RE,
+  VIS_SM_RE,
+  FRACTION_SM_RE,
+  parseWind,
+  parseWeatherToken,
+  parseCloudToken,
+  hasPrecip,
+  hasSnow,
+  hasThunderstorm,
+} from './metar';
+
+export type TafChangeType = 'BASE' | 'FM' | 'BECMG' | 'TEMPO' | 'PROB';
+
+export interface TafPeriod {
+  changeType: TafChangeType;
+  from: Date | null;
+  to: Date | null; // null for FM (prevails until the next FM / validity end)
+  probPct?: number; // PROB / PROB TEMPO
+  tempo?: boolean; // TEMPO or PROB TEMPO — temporary/conditional fluctuation
+  wind?: Wind;
+  visibilityM?: number | null;
+  cavok?: boolean;
+  weather: Weather[];
+  clouds: CloudLayer[];
+  raw: string; // this group's verbatim text
+}
+
+export interface ParsedTaf {
+  icao: string;
+  issuedAt: Date | null;
+  validFrom: Date | null;
+  validTo: Date | null;
+  periods: TafPeriod[];
+  /** Unsupported / unknown tokens encountered — non-empty means a PARTIAL parse (check the raw). */
+  warnings: string[];
+  raw: string;
+}
+
+export interface ParseTafOptions {
+  /** Anchor for resolving day/hour groups to absolute UTC instants (defaults to now). */
+  reference?: Date;
+}
+
+const ICAO_RE = /^[A-Z][A-Z0-9]{3}$/;
+const ISSUE_RE = /^(\d{6})Z$/; // ddhhmmZ
+const PERIOD_RE = /^(\d{4})\/(\d{4})$/; // ddhh/ddhh
+const FM_RE = /^FM(\d{6})$/; // FMddhhmm
+const PROB_RE = /^PROB(\d{2})$/;
+const DAY = 86400000;
+
+/** Resolve a day/hour(/minute) to an absolute UTC Date near `ref` (handles month rollover; hh=24 → next 00Z). */
+function resolveTime(day: number, hh: number, mm: number, ref: Date): Date {
+  let year = ref.getUTCFullYear();
+  let month = ref.getUTCMonth();
+  let d = new Date(Date.UTC(year, month, day, hh, mm)); // Date.UTC normalises hh=24 → next day 00
+  if (d.getTime() - ref.getTime() > 20 * DAY) {
+    // Candidate is far ahead → it actually belongs to the previous month.
+    if (--month < 0) { month = 11; year -= 1; }
+    d = new Date(Date.UTC(year, month, day, hh, mm));
+  } else if (ref.getTime() - d.getTime() > 20 * DAY) {
+    // Candidate is far behind → next month.
+    if (++month > 11) { month = 0; year += 1; }
+    d = new Date(Date.UTC(year, month, day, hh, mm));
+  }
+  return d;
+}
+
+const ddhh = (s: string, ref: Date): Date => resolveTime(+s.slice(0, 2), +s.slice(2, 4), 0, ref);
+const ddhhmm = (s: string, ref: Date): Date =>
+  resolveTime(+s.slice(0, 2), +s.slice(2, 4), +s.slice(4, 6), ref);
+
+const emptyPeriod = (changeType: TafChangeType, from: Date | null, to: Date | null): TafPeriod => ({
+  changeType,
+  from,
+  to,
+  weather: [],
+  clouds: [],
+  raw: '',
+});
+
+export function parseTaf(raw: string, opts: ParseTafOptions = {}): ParsedTaf {
+  const ref0 = opts.reference ?? new Date();
+  const cleaned = raw.trim().replace(/=+$/, '');
+  const tokens = cleaned.split(/\s+/).filter((t) => t && t !== 'TAF' && t !== 'AMD' && t !== 'COR');
+  const warnings: string[] = [];
+
+  const out: ParsedTaf = {
+    icao: '',
+    issuedAt: null,
+    validFrom: null,
+    validTo: null,
+    periods: [],
+    warnings,
+    raw: cleaned,
+  };
+
+  let i = 0;
+  if (i < tokens.length && ICAO_RE.test(tokens[i]) && !WIND_RE.test(tokens[i])) {
+    out.icao = tokens[i++];
+  }
+  let m: RegExpMatchArray | null;
+  if (i < tokens.length && (m = tokens[i].match(ISSUE_RE))) {
+    out.issuedAt = ddhhmm(m[1], ref0);
+    i++;
+  }
+  if (i < tokens.length && (m = tokens[i].match(PERIOD_RE))) {
+    out.validFrom = ddhh(m[1], ref0);
+    out.validTo = ddhh(m[2], ref0);
+    i++;
+  }
+
+  const ref = out.validFrom ?? out.issuedAt ?? ref0;
+
+  const periods: TafPeriod[] = [];
+  let current = emptyPeriod('BASE', out.validFrom, out.validTo);
+  let rawParts: string[] = [];
+  const open = (p: TafPeriod) => {
+    current.raw = rawParts.join(' ');
+    periods.push(current);
+    current = p;
+    rawParts = [];
+  };
+
+  for (; i < tokens.length; i++) {
+    const tok = tokens[i];
+
+    // ---- change-group headers ----
+    if ((m = tok.match(FM_RE))) {
+      open(emptyPeriod('FM', ddhhmm(m[1], ref), null));
+      rawParts.push(tok);
+      continue;
+    }
+    if (tok === 'BECMG' || tok === 'TEMPO') {
+      const pm = tokens[i + 1]?.match(PERIOD_RE);
+      open(
+        emptyPeriod(
+          tok === 'BECMG' ? 'BECMG' : 'TEMPO',
+          pm ? ddhh(pm[1], ref) : null,
+          pm ? ddhh(pm[2], ref) : null,
+        ),
+      );
+      if (tok === 'TEMPO') current.tempo = true;
+      rawParts.push(tok);
+      if (pm) rawParts.push(tokens[++i]);
+      continue;
+    }
+    if ((m = tok.match(PROB_RE))) {
+      const prob = +m[1];
+      const parts = [tok];
+      let j = i + 1;
+      let tempo = false;
+      if (tokens[j] === 'TEMPO') { tempo = true; parts.push(tokens[j]); j++; }
+      const pm = tokens[j]?.match(PERIOD_RE);
+      if (pm) parts.push(tokens[j]);
+      open(emptyPeriod('PROB', pm ? ddhh(pm[1], ref) : null, pm ? ddhh(pm[2], ref) : null));
+      current.probPct = prob;
+      if (tempo) current.tempo = true;
+      rawParts.push(...parts);
+      i = pm ? j : j - 1;
+      continue;
+    }
+
+    // ---- field tokens within the current group ----
+    rawParts.push(tok);
+    if ((m = tok.match(WIND_RE))) {
+      current.wind = parseWind(m);
+      continue;
+    }
+    if ((m = tok.match(VAR_RE))) {
+      if (current.wind) {
+        current.wind.variable = true;
+        current.wind.varFromDeg = +m[1];
+        current.wind.varToDeg = +m[2];
+      }
+      continue;
+    }
+    if (tok === 'CAVOK') {
+      current.cavok = true;
+      current.visibilityM = 10000;
+      continue;
+    }
+    if (tok === 'NSW') continue; // "no significant weather" — recognised, nothing to store
+    // Visibility in statute miles, possibly "1 1/2SM" across two tokens.
+    if (/^\d{1,2}$/.test(tok) && FRACTION_SM_RE.test(tokens[i + 1] ?? '')) {
+      const frac = tokens[i + 1].match(FRACTION_SM_RE)!;
+      const miles = parseInt(tok, 10) + parseInt(frac[1], 10) / parseInt(frac[2], 10);
+      current.visibilityM = Math.min(10000, Math.round(miles * 1609.344));
+      rawParts.push(tokens[++i]);
+      continue;
+    }
+    if ((m = tok.match(VIS_SM_RE))) {
+      const whole = parseInt(m[2], 10);
+      const miles = m[3] ? whole / parseInt(m[3], 10) : whole;
+      current.visibilityM = m[1] === 'P' ? 10000 : Math.min(10000, Math.round(miles * 1609.344));
+      continue;
+    }
+    if (current.visibilityM == null && (m = tok.match(VIS_M_RE))) {
+      const meters = parseInt(m[1], 10);
+      current.visibilityM = meters >= 9999 ? 10000 : meters;
+      continue;
+    }
+    const cloud = parseCloudToken(tok);
+    if (cloud) {
+      current.clouds.push(cloud);
+      continue;
+    }
+    const wx = parseWeatherToken(tok);
+    if (wx) {
+      current.weather.push(wx);
+      continue;
+    }
+    // Unsupported/unknown token (WS, TX/TN, turbulence/icing, junk) — record for a partial-parse flag.
+    warnings.push(tok);
+  }
+
+  current.raw = rawParts.join(' ');
+  periods.push(current);
+  out.periods = periods;
+  return out;
+}
+
+// ----- near-term hazard summary (advisory) -----
+
+export type TafHazardKind =
+  | 'thunderstorm'
+  | 'lowCeiling'
+  | 'lowVis'
+  | 'gusts'
+  | 'strongWind'
+  | 'rain'
+  | 'snow';
+
+export interface TafHazard {
+  kind: TafHazardKind;
+  changeType: TafChangeType;
+  probPct?: number;
+  from: Date | null;
+  to: Date | null;
+  gustKt?: number;
+  windKt?: number;
+  ceilingFt?: number;
+  visM?: number;
+}
+
+export interface TafSummary {
+  available: boolean; // a TAF was parsed
+  severity: Severity; // GOOD (no near-term hazard) or CAUTION — advisory only, capped at CAUTION
+  hazards: TafHazard[];
+  partial: boolean; // unsupported tokens were present (check the raw)
+  icao: string;
+  horizonH: number;
+}
+
+const HORIZON_H = 6;
+const GUST_KT = 22;
+const GUST_SPREAD_KT = 8;
+const STRONG_WIND_KT = 22;
+const LOW_CEIL_FT = 1000;
+const LOW_VIS_M = 5000;
+
+/** Display/priority order — most decision-relevant first. */
+const HAZARD_ORDER: TafHazardKind[] = ['thunderstorm', 'lowCeiling', 'lowVis', 'gusts', 'strongWind', 'rain', 'snow'];
+
+function periodHazards(pd: TafPeriod): TafHazard[] {
+  const base = { changeType: pd.changeType, probPct: pd.probPct, from: pd.from, to: pd.to };
+  const hz: TafHazard[] = [];
+  const storm = hasThunderstorm(pd);
+  if (storm) hz.push({ ...base, kind: 'thunderstorm' });
+  const ceil = ceilingFt(pd.clouds);
+  if (ceil != null && ceil < LOW_CEIL_FT) hz.push({ ...base, kind: 'lowCeiling', ceilingFt: ceil });
+  if (pd.visibilityM != null && pd.visibilityM < LOW_VIS_M) hz.push({ ...base, kind: 'lowVis', visM: pd.visibilityM });
+  if (pd.wind) {
+    const g = pd.wind.gustKt;
+    const s = pd.wind.speedKt;
+    if (g != null && (g >= GUST_KT || g - s >= GUST_SPREAD_KT)) hz.push({ ...base, kind: 'gusts', gustKt: g, windKt: s });
+    else if (s >= STRONG_WIND_KT) hz.push({ ...base, kind: 'strongWind', windKt: s });
+  }
+  if (!storm) {
+    // A thunderstorm already implies precipitation; otherwise call out snow/rain separately.
+    if (hasSnow(pd)) hz.push({ ...base, kind: 'snow' });
+    else if (hasPrecip(pd)) hz.push({ ...base, kind: 'rain' });
+  }
+  return hz;
+}
+
+/**
+ * Summarize the TAF's near-term hazards (default next 6 h) as an ADVISORY — never NO-FLY, never a
+ * verdict driver. Includes any period whose window overlaps [now, now+horizon]. `partial` mirrors
+ * the parser warnings so the UI can say "parsed partially — check the raw TAF".
+ */
+export function summarizeTaf(taf: ParsedTaf, now: Date, opts: { horizonH?: number } = {}): TafSummary {
+  const horizonH = opts.horizonH ?? HORIZON_H;
+  const end = new Date(now.getTime() + horizonH * 3600000);
+  const nearTerm = taf.periods.filter(
+    (pd) => (pd.from == null || pd.from <= end) && (pd.to == null || pd.to >= now),
+  );
+  const hazards = nearTerm
+    .flatMap(periodHazards)
+    .sort((a, b) => HAZARD_ORDER.indexOf(a.kind) - HAZARD_ORDER.indexOf(b.kind));
+  return {
+    available: taf.periods.length > 0,
+    severity: hazards.length ? 'CAUTION' : 'GOOD',
+    hazards,
+    partial: taf.warnings.length > 0,
+    icao: taf.icao,
+    horizonH,
+  };
+}
