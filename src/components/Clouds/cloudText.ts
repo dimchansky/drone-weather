@@ -20,6 +20,7 @@ const COVER_LABEL: Record<CloudCover, string> = {
   CLR: 'Sky clear',
   NSC: 'No significant cloud',
   NCD: 'No cloud detected',
+  '///': 'Cloud (amount unknown)',
 };
 
 /** Plain "how much of the sky" phrase — replaces the bare okta figure as primary text. */

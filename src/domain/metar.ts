@@ -37,7 +37,9 @@ export const FRACTION_SM_RE = /^(\d{1,2})\/(\d{1,2})SM$/;
 const RVR_RE = /^R\d{2}[LCR]?\//;
 // A trailing `///` is an automated station's "cloud type unavailable" marker
 // (e.g. FEW024///). Allow it so the base height is still captured; type → none.
-const CLOUD_RE = /^(FEW|SCT|BKN|OVC|VV)(\d{3}|\/{3})(CB|TCU|\/{3})?$/;
+// A leading `///` cover is an automated "amount unknown" marker (e.g. //////CB) — allow it so a
+// CB/TCU hazard flag on an otherwise-unknown layer is not lost (see parseCloudToken).
+const CLOUD_RE = /^(FEW|SCT|BKN|OVC|VV|\/{3})(\d{3}|\/{3})(CB|TCU|\/{3})?$/;
 const TEMP_RE = /^(M?\d{1,2})\/(M?\d{1,2})?$/;
 const QNH_RE = /^Q(\d{3,4})$/;
 const ALTIM_RE = /^A(\d{4})$/;
@@ -95,7 +97,13 @@ export function parseCloudToken(tok: string): CloudLayer | null {
   if (!m) return null;
   const cover = m[1] as CloudCover;
   const baseFt = m[2] === '///' ? null : parseInt(m[2], 10) * 100;
-  return makeCloudLayer(cover, baseFt, { cb: m[3] === 'CB', tcu: m[3] === 'TCU' });
+  const cb = m[3] === 'CB';
+  const tcu = m[3] === 'TCU';
+  // A bare `//////` (amount + type both unknown) carries no useful signal — skip it. Keep an
+  // unknown-cover layer only when it flags a CB/TCU hazard (e.g. //////CB from an automated
+  // station), so the convective signal reaches hasThunderstorm/hasConvectiveCloud + the cloud card.
+  if (cover === '///' && !cb && !tcu) return null;
+  return makeCloudLayer(cover, baseFt, { cb, tcu });
 }
 
 function resolveObsTime(ddhhmm: string, now: Date): Date {

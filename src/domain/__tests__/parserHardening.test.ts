@@ -7,7 +7,7 @@
 // dedicated tests for each change.
 
 import { describe, it, expect } from 'vitest';
-import { parseMetar } from '../metar';
+import { parseMetar, parseCloudToken, hasThunderstorm, hasConvectiveCloud } from '../metar';
 import { parseTaf } from '../taf';
 
 const REF = new Date('2026-07-01T12:00:00Z');
@@ -88,5 +88,31 @@ describe('parser hardening — invariants across B1–B3 edge cases', () => {
     const r = t(raw);
     expect(r.raw).toContain('INTER 0112/0116');
     expect(r.periods.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// --- B1: //////CB / //////TCU recognised as convective cloud (amount/base unknown) ---
+describe('parser hardening B1 — automated //////CB / //////TCU convective marker', () => {
+  it('parses //////CB into a CB layer that feeds the thunderstorm/convective logic', () => {
+    const r = m('ESSA 011220Z AUTO 30015G27KT 9999 BKN014/// //////CB 08/05 Q0998');
+    const cb = r.clouds.find((c) => c.cb);
+    expect(cb).toMatchObject({ cover: '///', baseFt: null, cb: true, tcu: false });
+    expect(hasThunderstorm(r)).toBe(true);
+    expect(hasConvectiveCloud(r)).toBe(true);
+    // the sibling BKN layer is still present and unaffected
+    expect(r.clouds).toEqual(expect.arrayContaining([expect.objectContaining({ cover: 'BKN', baseFt: 1400 })]));
+  });
+
+  it('parses //////TCU as convective cloud but not a thunderstorm', () => {
+    const l = parseCloudToken('//////TCU');
+    expect(l).toMatchObject({ cover: '///', baseFt: null, cb: false, tcu: true });
+    const r = m('ESSA 011220Z AUTO 30015KT 9999 //////TCU 08/05 Q0998');
+    expect(hasConvectiveCloud(r)).toBe(true);
+    expect(hasThunderstorm(r)).toBe(false);
+  });
+
+  it('drops a bare //////  (no CB/TCU) as noise, and keeps COVERbbb/// unchanged', () => {
+    expect(parseCloudToken('//////')).toBeNull();
+    expect(parseCloudToken('BKN014///')).toMatchObject({ cover: 'BKN', baseFt: 1400, cb: false, tcu: false });
   });
 });

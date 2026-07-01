@@ -14,7 +14,8 @@ export type CloudCover =
   | 'NSC'
   | 'NCD'
   | 'SKC'
-  | 'CLR';
+  | 'CLR'
+  | '///'; // amount unknown (automated `//////` marker) — only emitted when it carries CB/TCU
 
 export interface CloudLayer {
   cover: CloudCover;
