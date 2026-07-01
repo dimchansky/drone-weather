@@ -1,38 +1,34 @@
-// Presentation helpers for the TAF summary — format the structured hazards into the Layer-2 strip
-// line and an optional banner note. Wind/ceiling render in the user's units; times are UTC (the
-// aviation convention — shown with a Z, which also sidesteps the device-local-time caveat).
+// Presentation helpers for the TAF summary — turn the structured hazards into plain, non-aviation
+// language: human local-time windows (device-local primary, UTC secondary), jargon expanded
+// (TEMPO → "possible at times", PROB30 → "30% chance", BECMG → "becoming", FM → "from"), same-kind
+// hazards aggregated in the domain, and an explicit "+N more" instead of a bare ellipsis.
 
 import type { TafHazard, TafSummary } from '../../domain/taf';
 import { fmtWindSpeed, fmtAltFt, round, type WindUnit, type AltUnit } from '../../domain/units';
+import { fmtLocalTime, fmtUtcTime } from '../../utils/time';
 
-const utcHour = (d: Date | null): string => (d ? String(d.getUTCHours()).padStart(2, '0') : '');
+const MAX_SHOWN = 3;
 
-function windowLabel(h: TafHazard): string {
-  if (h.changeType === 'BASE') return ''; // prevailing forecast — "now"
-  if (h.changeType === 'FM') return h.from ? `from ${utcHour(h.from)}Z` : '';
-  if (h.from && h.to) return `${utcHour(h.from)}–${utcHour(h.to)}Z`;
-  return h.from ? `from ${utcHour(h.from)}Z` : '';
+/** "11:00–13:00 (08:00–10:00 UTC)" — device-local primary, UTC secondary. */
+function timeWindow(h: TafHazard): string {
+  const u = (d: Date): string => fmtUtcTime(d).replace('Z', '');
+  const local = h.from && h.to ? `${fmtLocalTime(h.from)}–${fmtLocalTime(h.to)}` : h.from ? fmtLocalTime(h.from) : '';
+  const utc = h.from && h.to ? `${u(h.from)}–${u(h.to)} UTC` : h.from ? `${u(h.from)} UTC` : '';
+  return local ? `${local} (${utc})` : '';
 }
 
-function changePrefix(h: TafHazard): string {
-  if (h.changeType === 'PROB') return h.probPct != null ? `PROB${h.probPct}` : 'PROB';
-  if (h.changeType === 'TEMPO') return 'TEMPO';
-  if (h.changeType === 'BECMG') return 'BECMG';
-  return '';
-}
-
-function core(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
+function hazardNoun(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
   switch (h.kind) {
     case 'thunderstorm':
       return 'thunderstorms';
     case 'lowCeiling':
-      return `ceiling ${fmtAltFt(h.ceilingFt ?? 0, altUnit)}`;
+      return `low cloud (ceiling ${fmtAltFt(h.ceilingFt ?? 0, altUnit)})`;
     case 'lowVis':
-      return `vis ${round((h.visM ?? 0) / 1000, 1)} km`;
+      return `reduced visibility (${round((h.visM ?? 0) / 1000, 1)} km)`;
     case 'gusts':
       return `gusts to ${fmtWindSpeed(h.gustKt ?? 0, windUnit)}`;
     case 'strongWind':
-      return `wind ${fmtWindSpeed(h.windKt ?? 0, windUnit)}`;
+      return `strong wind ${fmtWindSpeed(h.windKt ?? 0, windUnit)}`;
     case 'rain':
       return 'rain';
     case 'snow':
@@ -40,27 +36,42 @@ function core(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
   }
 }
 
-function hazardPhrase(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
-  return [changePrefix(h), core(h, windUnit, altUnit), windowLabel(h)].filter(Boolean).join(' ');
+/** A full plain-language hazard phrase, e.g. "thunderstorms possible at times 11:00–17:00 (08:00–14:00 UTC)". */
+export function hazardPhrase(h: TafHazard, windUnit: WindUnit, altUnit: AltUnit): string {
+  const noun = hazardNoun(h, windUnit, altUnit);
+  const win = timeWindow(h);
+
+  if (h.changeType === 'PROB' && h.probPct != null) {
+    const atTimes = h.tempo ? 'at times ' : '';
+    return `${h.probPct}% chance of ${noun} ${atTimes}${win}`.trim();
+  }
+  if (h.changeType === 'TEMPO' || h.tempo) {
+    return `${noun} possible at times ${win}`.trim();
+  }
+  if (h.changeType === 'BECMG') {
+    return win ? `${noun} becoming ${win}` : `${noun} becoming`;
+  }
+  if (h.changeType === 'FM') {
+    return win ? `${noun} from ${win}` : noun;
+  }
+  return win ? `${noun} ${win}` : noun; // BASE (prevailing)
 }
 
-/** Compact Layer-2 strip line. Labelled as the airport forecast; top 3 hazards, then "…". */
+/** Compact Layer-2 strip line — plain language, airport-labelled, top few hazards + explicit "+N more". */
 export function tafStripText(s: TafSummary, windUnit: WindUnit, altUnit: AltUnit): string {
   const label = `TAF ${s.icao}`.trim();
   const partial = s.partial ? ' · parsed partially — check raw' : '';
   if (!s.hazards.length) {
     return `${label} · airport forecast: no significant change next ${s.horizonH} h${partial}`;
   }
-  const items = s.hazards.slice(0, 3).map((h) => hazardPhrase(h, windUnit, altUnit));
-  const more = s.hazards.length > 3 ? ' · …' : '';
-  return `${label} · airport forecast: ${items.join(' · ')}${more}${partial}`;
+  const shown = s.hazards.slice(0, MAX_SHOWN).map((h) => hazardPhrase(h, windUnit, altUnit));
+  const hidden = s.hazards.length - MAX_SHOWN;
+  const more = hidden > 0 ? ` · +${hidden} more TAF hazard${hidden > 1 ? 's' : ''}` : '';
+  return `${label} · airport forecast: ${shown.join(' · ')}${more}${partial}`;
 }
 
 /** Short banner note — only for a forecast thunderstorm (the most decision-relevant); null otherwise. */
 export function tafBannerNote(s: TafSummary): string | null {
   const ts = s.hazards.find((h) => h.kind === 'thunderstorm');
-  if (!ts) return null;
-  const prob = ts.probPct != null ? `PROB${ts.probPct} ` : '';
-  const w = windowLabel(ts);
-  return `TAF: ${prob}possible thunderstorms${w ? ` ${w}` : ''}`;
+  return ts ? `TAF: ${hazardPhrase(ts, 'kt', 'ft')}` : null;
 }

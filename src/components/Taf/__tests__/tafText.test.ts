@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { tafStripText, tafBannerNote } from '../tafText';
+import { tafStripText, tafBannerNote, hazardPhrase } from '../tafText';
 import type { TafHazard, TafSummary } from '../../../domain/taf';
 
+// Local times are device-timezone dependent, so assertions target the deterministic UTC secondary
+// and the plain-language wording (jargon must be expanded, never raw TEMPO/PROB/BECMG/FM codes).
 const hz = (h: Partial<TafHazard> & { kind: TafHazard['kind'] }): TafHazard => ({
   changeType: 'TEMPO',
+  tempo: true,
   from: null,
   to: null,
   ...h,
@@ -13,31 +16,69 @@ const summary = (hazards: TafHazard[], over: Partial<TafSummary> = {}): TafSumma
   severity: hazards.length ? 'CAUTION' : 'GOOD',
   hazards,
   partial: false,
-  icao: 'EDDB',
+  icao: 'VVTS',
   horizonH: 6,
   ...over,
+});
+
+const win = (fromZ: string, toZ?: string) => ({
+  from: new Date(fromZ),
+  to: toZ ? new Date(toZ) : null,
+});
+
+describe('hazardPhrase — jargon expansion + human windows', () => {
+  it('TEMPO → "possible at times", with local primary and UTC secondary', () => {
+    const t = hazardPhrase(hz({ kind: 'thunderstorm', changeType: 'TEMPO', tempo: true, ...win('2026-07-01T08:00:00Z', '2026-07-01T14:00:00Z') }), 'kt', 'ft');
+    expect(t).toMatch(/^thunderstorms possible at times \d{2}:\d{2}–\d{2}:\d{2} \(08:00–14:00 UTC\)$/);
+  });
+
+  it('PROB30 TEMPO → "30% chance of … at times"', () => {
+    const t = hazardPhrase(hz({ kind: 'thunderstorm', changeType: 'PROB', probPct: 30, tempo: true, ...win('2026-07-01T18:00:00Z', '2026-07-01T22:00:00Z') }), 'kt', 'ft');
+    expect(t).toMatch(/^30% chance of thunderstorms at times /);
+    expect(t).toMatch(/\(18:00–22:00 UTC\)$/);
+  });
+
+  it('BECMG → "becoming"; FM → "from"', () => {
+    const becmg = hazardPhrase(hz({ kind: 'gusts', changeType: 'BECMG', tempo: false, gustKt: 28, ...win('2026-07-01T08:00:00Z', '2026-07-01T10:00:00Z') }), 'kt', 'ft');
+    expect(becmg).toMatch(/^gusts to 28 kt becoming /);
+    const fm = hazardPhrase(hz({ kind: 'gusts', changeType: 'FM', tempo: false, gustKt: 25, ...win('2026-07-01T14:00:00Z') }), 'kt', 'ft');
+    expect(fm).toMatch(/^gusts to 25 kt from \d{2}:\d{2} \(14:00 UTC\)$/);
+  });
+
+  it('formats gusts in the chosen wind unit', () => {
+    const t = hazardPhrase(hz({ kind: 'gusts', changeType: 'FM', gustKt: 25, ...win('2026-07-01T14:00:00Z') }), 'ms', 'ft');
+    expect(t).toMatch(/gusts to 12\.9 m\/s/);
+  });
 });
 
 describe('tafStripText', () => {
   it('says no significant change when there are no hazards', () => {
     expect(tafStripText(summary([]), 'kt', 'ft')).toBe(
-      'TAF EDDB · airport forecast: no significant change next 6 h',
+      'TAF VVTS · airport forecast: no significant change next 6 h',
     );
   });
 
-  it('formats hazards with change prefix, unit-aware values, and UTC windows', () => {
+  it('renders plain language with no raw aviation codes', () => {
     const s = summary([
-      hz({ kind: 'rain', changeType: 'TEMPO', from: new Date('2026-07-01T08:00:00Z'), to: new Date('2026-07-01T12:00:00Z') }),
-      hz({ kind: 'gusts', changeType: 'FM', from: new Date('2026-07-01T14:00:00Z'), to: null, gustKt: 25 }),
+      hz({ kind: 'thunderstorm', changeType: 'TEMPO', tempo: true, ...win('2026-07-01T08:00:00Z', '2026-07-01T14:00:00Z') }),
+      hz({ kind: 'lowVis', changeType: 'TEMPO', tempo: true, visM: 3000, ...win('2026-07-01T10:00:00Z', '2026-07-01T14:00:00Z') }),
     ]);
     const txt = tafStripText(s, 'kt', 'ft');
-    expect(txt).toMatch(/TEMPO rain 08–12Z/);
-    expect(txt).toMatch(/gusts to 25 kt from 14Z/);
+    expect(txt).toMatch(/thunderstorms possible at times/);
+    expect(txt).toMatch(/reduced visibility \(3 km\)/);
+    expect(txt).not.toMatch(/TEMPO|PROB\d|BECMG| FM\d/); // no raw jargon
   });
 
-  it('renders gusts in the chosen wind unit', () => {
-    const s = summary([hz({ kind: 'gusts', changeType: 'FM', from: new Date('2026-07-01T14:00:00Z'), gustKt: 25 })]);
-    expect(tafStripText(s, 'ms', 'ft')).toMatch(/gusts to 12\.9 m\/s/);
+  it('shows an explicit "+N more" instead of a bare ellipsis', () => {
+    const many = [
+      hz({ kind: 'thunderstorm', ...win('2026-07-01T08:00:00Z', '2026-07-01T10:00:00Z') }),
+      hz({ kind: 'lowCeiling', ceilingFt: 400, ...win('2026-07-01T08:00:00Z', '2026-07-01T10:00:00Z') }),
+      hz({ kind: 'lowVis', visM: 2000, ...win('2026-07-01T08:00:00Z', '2026-07-01T10:00:00Z') }),
+      hz({ kind: 'gusts', gustKt: 30, ...win('2026-07-01T08:00:00Z', '2026-07-01T10:00:00Z') }),
+    ];
+    const txt = tafStripText(summary(many), 'kt', 'ft');
+    expect(txt).not.toContain('…');
+    expect(txt).toMatch(/\+1 more TAF hazard\b/);
   });
 
   it('flags a partial parse', () => {
@@ -50,10 +91,10 @@ describe('tafBannerNote', () => {
     expect(tafBannerNote(summary([hz({ kind: 'rain' })]))).toBeNull();
   });
 
-  it('warns about a probable thunderstorm with its window', () => {
-    const s = summary([
-      hz({ kind: 'thunderstorm', changeType: 'PROB', probPct: 30, from: new Date('2026-07-01T18:00:00Z'), to: new Date('2026-07-01T22:00:00Z') }),
-    ]);
-    expect(tafBannerNote(s)).toBe('TAF: PROB30 possible thunderstorms 18–22Z');
+  it('gives a plain-language thunderstorm note', () => {
+    const s = summary([hz({ kind: 'thunderstorm', changeType: 'PROB', probPct: 30, tempo: true, ...win('2026-07-01T18:00:00Z', '2026-07-01T22:00:00Z') })]);
+    const note = tafBannerNote(s)!;
+    expect(note).toMatch(/^TAF: 30% chance of thunderstorms at times /);
+    expect(note).toMatch(/\(18:00–22:00 UTC\)$/);
   });
 });

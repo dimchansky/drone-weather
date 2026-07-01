@@ -41,9 +41,12 @@ sources always labelled; the raw METAR always available verbatim.
 - `ForecastStrip` *(Iteration 3)* — short-term **model** forecast: *"Next 3h (model): wind steady ·
   gusts to 15 kt · no rain expected"* / *"…rain likely in ~45m"*. Colored by the forecast advisory
   (CAUTION when rain/rising wind ahead). Always labelled "model" so it never reads as observed.
-- `TafStrip` — the **aviation TAF** near-term hazards: *"TAF EDDB · airport forecast: TEMPO
-  thunderstorms 10–14Z · …"*. Labelled airport-forecast (not your exact site), UTC windows,
-  advisory-only. Separate from the model `ForecastStrip`; the raw TAF stays verbatim in the Raw card.
+- `TafStrip` — the **aviation TAF** near-term hazards in plain language: *"TAF EDDB · airport
+  forecast: thunderstorms possible at times 11:00–17:00 (08:00–14:00 UTC)"*. Jargon expanded
+  (TEMPO → "possible at times", PROB30 → "30% chance", BECMG → "becoming", FM → "from"); windows are
+  **device-local primary, UTC secondary**; adjacent same-kind hazards are aggregated; overflow shows
+  an explicit "+N more". Labelled airport-forecast (not your exact site), advisory-only. Separate
+  from the model `ForecastStrip`; the raw TAF stays verbatim in the Raw card.
 - `DaylightStrip` *(Iteration 2)* — sunrise/sunset · daylight remaining · golden-hour window, or a
   night/twilight advisory. Colored by the daylight severity (CAUTION in twilight/night, never
   NO-FLY). Times are **device-local** and the strip says so.

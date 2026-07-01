@@ -55,4 +55,14 @@ describe('summarizeTaf', () => {
     const s = sum('TAF KDEN 011130Z 0112/0212 27015KT P6SM SCT100 WS020/23045KT', '2026-07-01T12:00:00Z');
     expect(s.partial).toBe(true);
   });
+
+  it('aggregates two adjacent TEMPO thunderstorm periods into one spanning window', () => {
+    const raw =
+      'TAF VVTS 010500Z 0106/0212 28012KT 9999 FEW020 TEMPO 0108/0110 TSRA BKN015CB TEMPO 0110/0114 TSRA BKN013CB';
+    const s = sum(raw, '2026-07-01T09:00:00Z'); // both 08–10Z and 10–14Z windows are near-term
+    const storms = s.hazards.filter((h) => h.kind === 'thunderstorm');
+    expect(storms).toHaveLength(1);
+    expect(storms[0].from?.toISOString()).toBe('2026-07-01T08:00:00.000Z');
+    expect(storms[0].to?.toISOString()).toBe('2026-07-01T14:00:00.000Z');
+  });
 });

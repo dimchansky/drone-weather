@@ -248,6 +248,7 @@ export interface TafHazard {
   kind: TafHazardKind;
   changeType: TafChangeType;
   probPct?: number;
+  tempo?: boolean; // temporary/at-times fluctuation (TEMPO or PROB TEMPO)
   from: Date | null;
   to: Date | null;
   gustKt?: number;
@@ -276,7 +277,7 @@ const LOW_VIS_M = 5000;
 const HAZARD_ORDER: TafHazardKind[] = ['thunderstorm', 'lowCeiling', 'lowVis', 'gusts', 'strongWind', 'rain', 'snow'];
 
 function periodHazards(pd: TafPeriod): TafHazard[] {
-  const base = { changeType: pd.changeType, probPct: pd.probPct, from: pd.from, to: pd.to };
+  const base = { changeType: pd.changeType, probPct: pd.probPct, tempo: pd.tempo, from: pd.from, to: pd.to };
   const hz: TafHazard[] = [];
   const storm = hasThunderstorm(pd);
   if (storm) hz.push({ ...base, kind: 'thunderstorm' });
@@ -297,10 +298,54 @@ function periodHazards(pd: TafPeriod): TafHazard[] {
   return hz;
 }
 
+const maxDef = (a?: number, b?: number): number | undefined => (a == null ? b : b == null ? a : Math.max(a, b));
+const minDef = (a?: number, b?: number): number | undefined => (a == null ? b : b == null ? a : Math.min(a, b));
+
+/**
+ * Merge adjacent/overlapping hazards of the SAME kind into one spanning window (e.g. two
+ * consecutive TEMPO thunderstorm periods → one "thunderstorms 08–14Z"), so the summary reads as
+ * conditions rather than raw TAF groups. Mixed qualifiers collapse to a temporary "at times" flag.
+ */
+function aggregateHazards(hazards: TafHazard[]): TafHazard[] {
+  const byKind = new Map<TafHazardKind, TafHazard[]>();
+  for (const h of hazards) {
+    const list = byKind.get(h.kind);
+    if (list) list.push(h);
+    else byKind.set(h.kind, [h]);
+  }
+  const merged: TafHazard[] = [];
+  for (const list of byKind.values()) {
+    const sorted = [...list].sort((a, b) => (a.from?.getTime() ?? 0) - (b.from?.getTime() ?? 0));
+    for (const h of sorted) {
+      const prev = merged[merged.length - 1];
+      const adjacent =
+        prev &&
+        prev.kind === h.kind &&
+        (prev.to == null || h.from == null || h.from.getTime() <= prev.to.getTime() + 3600000);
+      if (adjacent) {
+        prev.from = prev.from && h.from ? new Date(Math.min(prev.from.getTime(), h.from.getTime())) : prev.from ?? h.from;
+        prev.to = prev.to && h.to ? new Date(Math.max(prev.to.getTime(), h.to.getTime())) : null;
+        prev.gustKt = maxDef(prev.gustKt, h.gustKt);
+        prev.windKt = maxDef(prev.windKt, h.windKt);
+        prev.ceilingFt = minDef(prev.ceilingFt, h.ceilingFt);
+        prev.visM = minDef(prev.visM, h.visM);
+        if (prev.changeType !== h.changeType || prev.probPct !== h.probPct) {
+          prev.changeType = 'TEMPO';
+          prev.probPct = undefined;
+          prev.tempo = true;
+        }
+      } else {
+        merged.push({ ...h });
+      }
+    }
+  }
+  return merged.sort((a, b) => HAZARD_ORDER.indexOf(a.kind) - HAZARD_ORDER.indexOf(b.kind));
+}
+
 /**
  * Summarize the TAF's near-term hazards (default next 6 h) as an ADVISORY — never NO-FLY, never a
- * verdict driver. Includes any period whose window overlaps [now, now+horizon]. `partial` mirrors
- * the parser warnings so the UI can say "parsed partially — check the raw TAF".
+ * verdict driver. Includes any period whose window overlaps [now, now+horizon], then aggregates
+ * adjacent same-kind hazards. `partial` mirrors the parser warnings so the UI can flag it.
  */
 export function summarizeTaf(taf: ParsedTaf, now: Date, opts: { horizonH?: number } = {}): TafSummary {
   const horizonH = opts.horizonH ?? HORIZON_H;
@@ -308,9 +353,7 @@ export function summarizeTaf(taf: ParsedTaf, now: Date, opts: { horizonH?: numbe
   const nearTerm = taf.periods.filter(
     (pd) => (pd.from == null || pd.from <= end) && (pd.to == null || pd.to >= now),
   );
-  const hazards = nearTerm
-    .flatMap(periodHazards)
-    .sort((a, b) => HAZARD_ORDER.indexOf(a.kind) - HAZARD_ORDER.indexOf(b.kind));
+  const hazards = aggregateHazards(nearTerm.flatMap(periodHazards));
   return {
     available: taf.periods.length > 0,
     severity: hazards.length ? 'CAUTION' : 'GOOD',

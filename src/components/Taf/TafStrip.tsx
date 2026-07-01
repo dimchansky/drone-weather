@@ -22,7 +22,7 @@ export function TafStrip({
   return (
     <InfoStrip
       severity={summary.severity}
-      title="TAF — airport forecast, not your exact launch point (times UTC)"
+      title="TAF — airport forecast, not your exact launch point. Times in your device's local time (UTC in parentheses)."
     >
       {tafStripText(summary, windUnit, altUnit)}
     </InfoStrip>
