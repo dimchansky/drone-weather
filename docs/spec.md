@@ -401,6 +401,8 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
   amount/probability; `moistureRisk` owns fog/dew/near-saturation only (no double-count).
 - `StatusStrip` — one-line data confidence: station · distance · METAR age · fetch time · QNH
   (hPa + inHg, **METAR only** — never synthesized for a model-only brief). Colored by confidence.
+  Clock times (fetch/model time) render in the flight-site zone (`LocationTime`; device-local
+  fallback), named at the end; the age stays relative. `StationCard` follows the same rule.
 - `PrecipNowPill` — source-explicit precip-now (`precipNow`): "No precipitation reported now" /
   "METAR: …" / "Model: …". Model probability never rendered as observed.
 - `VerticalHazardStrip` — one-line ops-band conclusion (`opsBandHazard`): worst icing in the band

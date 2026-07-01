@@ -2,7 +2,7 @@ import { Card } from '../common/Card';
 import { useBriefStore } from '../../store/briefStore';
 import { useLocationStore } from '../../store/locationStore';
 import { fmtDistance, fmtBearing, fmtAge } from '../../utils/format';
-import { ageMinutes, fmtLocalTime, fmtUtcTime } from '../../utils/time';
+import { ageMinutes, fmtTimeInZone, fmtUtcTime, timeSourceLabel } from '../../utils/time';
 import type { Brief } from '../../domain/brief';
 import styles from './StationCard.module.css';
 
@@ -12,7 +12,9 @@ export function StationCard({ brief, now }: { brief: Brief; now: Date }) {
 
   const observed = brief.metar.observedAt;
   const age = ageMinutes(observed, now);
-  const fetched = `fetched ${fmtLocalTime(brief.fetchedAt)} LT`;
+  const lt = brief.locationTime;
+  const zone = timeSourceLabel(lt);
+  const fetched = `fetched ${fmtTimeInZone(brief.fetchedAt, lt)}`;
 
   if (brief.source === 'model' || !brief.station) {
     return (
@@ -22,7 +24,7 @@ export function StationCard({ brief, now }: { brief: Brief; now: Date }) {
           location — treat it as an approximation.
         </p>
         <p className={styles.fetched}>
-          Model time {fmtLocalTime(observed)} LT · {fetched}
+          Model time {fmtTimeInZone(observed, lt)} · {fetched} · times {zone}
         </p>
       </Card>
     );
@@ -50,12 +52,12 @@ export function StationCard({ brief, now }: { brief: Brief; now: Date }) {
         </div>
         <div title={`${fmtUtcTime(observed)} · ${fetched}`}>
           <dt>METAR observed</dt>
-          <dd>{fmtLocalTime(observed)} LT</dd>
+          <dd>{fmtTimeInZone(observed, lt)}</dd>
           <span className={styles.sub}>{fmtAge(age)} old</span>
         </div>
       </dl>
 
-      <p className={styles.fetched}>{fetched}</p>
+      <p className={styles.fetched}>{fetched} · times {zone}</p>
 
       {nearby.length > 1 && (
         <label className={styles.picker}>

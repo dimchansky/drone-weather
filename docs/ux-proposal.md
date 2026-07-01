@@ -110,6 +110,8 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
   local time** with the zone named (e.g. "times America/Chicago"); TAF keeps UTC as the secondary.
   Graceful **device-local fallback** when the model timezone is unavailable (labelled "device local
   time"). The Open-Meteo forecast strip shows only relative durations, so it needed no change.
+  Every non-raw clock time follows this rule — the `StatusStrip` (fetch/model time) and `StationCard`
+  (METAR observed + fetch time) also render in the flight-site zone; the raw METAR/TAF stay verbatim.
 
 ### Later / optional (no near-term priority)
 
