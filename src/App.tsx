@@ -12,8 +12,7 @@ import { parseTaf, summarizeTaf } from './domain/taf';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
-import { LocationBar } from './components/Location/LocationBar';
-import { SettingsBar } from './components/SettingsBar/SettingsBar';
+import { AppHeader } from './components/Header/AppHeader';
 import { OverviewGrid } from './components/Overview/OverviewGrid';
 import { DecisionBanner } from './components/Risk/DecisionBanner';
 import { RiskFactors } from './components/Risk/RiskFactors';
@@ -102,13 +101,7 @@ export function App() {
 
   return (
     <div className={styles.app}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Drone&nbsp;Weather</h1>
-        <p className={styles.tagline}>Pre-flight weather decision support</p>
-      </header>
-
-      <LocationBar />
-      <SettingsBar />
+      <AppHeader brief={brief} />
 
       <main className={styles.main}>
         {!coord && (

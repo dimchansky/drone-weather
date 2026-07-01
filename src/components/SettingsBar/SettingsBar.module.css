@@ -1,22 +1,31 @@
 .bar {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .field {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
+  gap: 5px;
+  font-size: 0.78rem;
   color: var(--text-dim);
 }
 
 .field select {
-  padding: 5px 8px;
+  padding: 4px 6px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+}
+
+/* Very narrow screens: the selects' values ("m/s", "ft", "Auto") speak for themselves;
+   aria-labels on the selects keep them named for assistive tech. */
+@media (max-width: 479px) {
+  .fieldLabel {
+    display: none;
+  }
 }
