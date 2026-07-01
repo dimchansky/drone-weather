@@ -1,4 +1,4 @@
-import type { RiskComponent, RiskSummary as RiskSummaryT, Wind } from '../../domain/types';
+import type { RiskComponent, RiskSummary as RiskSummaryT, Severity, Wind } from '../../domain/types';
 import { SEVERITY_VAR } from '../../utils/severity';
 import { compassPoint } from '../../domain/geo';
 import { SeverityChip } from '../common/SeverityChip';
@@ -18,7 +18,16 @@ function mainIssue(primary: RiskComponent, wind: Wind): string {
  * Layer 1 — the decision anchor: big GOOD/CAUTION/NO-FLY verdict, the single dominant reason with
  * its magnitude, short hedged advice, and a reduced-confidence note. Decision support only.
  */
-export function DecisionBanner({ risk, wind }: { risk: RiskSummaryT; wind: Wind }) {
+export function DecisionBanner({
+  risk,
+  wind,
+  secondary,
+}: {
+  risk: RiskSummaryT;
+  wind: Wind;
+  /** Secondary at-a-glance line (Iteration 2 daylight; Iteration 3 forecast). Colored when > GOOD. */
+  secondary?: { text: string; severity: Severity };
+}) {
   return (
     <section className={styles.wrap} style={{ borderColor: SEVERITY_VAR[risk.overall] }}>
       <div className={styles.top}>
@@ -34,7 +43,14 @@ export function DecisionBanner({ risk, wind }: { risk: RiskSummaryT; wind: Wind 
 
       <p className={styles.advice}>{risk.advice}</p>
 
-      {/* Reserved secondary line — Iteration 2 (daylight) / Iteration 3 (forecast) strips slot here. */}
+      {secondary && (
+        <p
+          className={styles.secondary}
+          style={secondary.severity !== 'GOOD' ? { color: SEVERITY_VAR[secondary.severity] } : undefined}
+        >
+          {secondary.text}
+        </p>
+      )}
     </section>
   );
 }

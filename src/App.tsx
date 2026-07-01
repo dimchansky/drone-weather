@@ -6,6 +6,7 @@ import { assessRisk } from './domain/risk';
 import { icingBand } from './domain/icing';
 import { precipNow } from './domain/precip';
 import { opsBandHazard } from './domain/vertical';
+import { daylight, daylightSeverity } from './domain/sun';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
@@ -15,6 +16,8 @@ import { DecisionBanner } from './components/Risk/DecisionBanner';
 import { RiskFactors } from './components/Risk/RiskFactors';
 import { StatusStrip } from './components/Status/StatusStrip';
 import { PrecipNowPill } from './components/Precip/PrecipNowPill';
+import { DaylightStrip } from './components/Daylight/DaylightStrip';
+import { daylightBannerLine } from './components/Daylight/daylightText';
 import { WindCompass } from './components/Wind/WindCompass';
 import { StationCard } from './components/Station/StationCard';
 import { VerticalAnalyzer } from './components/Vertical/VerticalAnalyzer';
@@ -57,6 +60,10 @@ export function App() {
     });
   }, [brief, now, windUnit, altUnit]);
 
+  // Daylight for the flight location (pure, offline). Recomputes on the clock tick so the phase,
+  // remaining daylight, and golden-hour window stay live. Times are rendered device-local.
+  const dl = useMemo(() => (brief ? daylight(now, brief.coord) : null), [brief, now]);
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
@@ -97,11 +104,18 @@ export function App() {
             )}
 
             {/* Layer 1 — the decision */}
-            <DecisionBanner risk={liveRisk ?? brief.risk} wind={brief.metar.wind} />
+            <DecisionBanner
+              risk={liveRisk ?? brief.risk}
+              wind={brief.metar.wind}
+              secondary={
+                dl ? { text: daylightBannerLine(dl, now), severity: daylightSeverity(dl.phase) } : undefined
+              }
+            />
 
             {/* Layer 2 — decision support (compact, always visible) */}
             <StatusStrip brief={brief} now={now} />
             <PrecipNowPill precip={precipNow(brief.metar, brief.model)} />
+            {dl && <DaylightStrip daylight={dl} />}
             <RiskFactors risk={liveRisk ?? brief.risk} />
             <VerticalHazardStrip
               hazard={opsBandHazard(

@@ -42,3 +42,10 @@
   color: var(--text-dim);
   line-height: 1.45;
 }
+
+.secondary {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
