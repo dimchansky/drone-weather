@@ -146,6 +146,8 @@ export interface RiskSummary {
   components: RiskComponent[];
   headline: string;        // one-line plain-language summary
   uncertain: boolean;      // true when confidence < OK
+  primary: RiskComponent | null; // dominant weather driver (banner "Main issue"); null when GOOD
+  advice: string;          // short hedged pilot advice keyed off `primary`
 }
 ```
 
@@ -379,22 +381,37 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 
 ## 8. UI structure & states
 
-**Layout:** mobile-first single column; desktop widens to a two-column dashboard. Order
-top→bottom (importance-first for pre-flight): **Risk summary** → **Wind** → **Vertical
-analyzer** → **Clouds/ceiling** → **Thermo/moisture** → **Station info** → **Raw METAR/
-TAF** (collapsible) → disclaimer/version footer.
+**Layout (decision-first, 2026-07-01):** mobile-first single column, three glance-able layers
+(full rationale in [ux-proposal.md](ux-proposal.md)). Order top→bottom:
+
+1. **Decision** — `DecisionBanner`.
+2. **Decision support** (compact strips, always visible) — `StatusStrip` → `PrecipNowPill` →
+   `RiskFactors` → `VerticalHazardStrip` → `WindCompass`; reserved slots for the Iteration-2
+   daylight and Iteration-3 forecast strips.
+3. **Technical detail** (collapsible `Card`, collapsed by default) — `VerticalAnalyzer` →
+   `Clouds` → `ThermoMoisture` → `Station` → **Raw METAR/TAF** → disclaimer/version footer.
 
 **Components:**
-- `RiskSummary` — big status chip (GOOD/CAUTION/HIGH/NOFLY) + headline + expandable list
-  of component chips, each with reason. `uncertain` badge when confidence reduced.
-- `Wind` — SVG compass: **source arrow** + **drift arrow** (opposite) + variable arc;
-  speed in all three units; gust; outbound/return advice text.
+- `DecisionBanner` — big status chip (GOOD/CAUTION/HIGH/NOFLY) + single **Main issue** (dominant
+  weather driver + magnitude, hidden when GOOD) + short hedged **advice** + `uncertain` badge.
+  Reads `RiskSummary.primary`/`advice` (derived in `assessRisk`).
+- `RiskFactors` — the six weather component rows (wind, gust, visibility, moisture, ceiling,
+  icing), each with its reason. Freshness/distance are shown by `StatusStrip`, not here.
+- `StatusStrip` — one-line data confidence: station · distance · METAR age · fetch time · QNH
+  (hPa + inHg, **METAR only** — never synthesized for a model-only brief). Colored by confidence.
+- `PrecipNowPill` — source-explicit precip-now (`precipNow`): "No precipitation reported now" /
+  "METAR: …" / "Model: …". Model probability never rendered as observed.
+- `VerticalHazardStrip` — one-line ops-band conclusion (`opsBandHazard`): worst icing in the band
+  + cloud-base-vs-ops. Keeps the vertical signal visible while the full chart is collapsed.
+- `WindCompass` — SVG compass: **source arrow** + **drift arrow** (opposite) + variable arc;
+  speed in all three units; gust; `routeAdvice` (shared with the banner).
 - `VerticalAnalyzer` — SVG chart: altitude axis (focus 0–120 m, toggle to 1000 m),
   temperature line, cloud-base marker(s), icing band coloring, safe/caution/high zones.
 - `Clouds` — layers (ft + m), ceiling, CAVOK note, or estimated-base note (source tagged).
-- `ThermoMoisture` — T, Td, RH, spread, with interpretation.
+- `ThermoMoisture` — T, Td, RH, spread, with interpretation (QNH promoted to `StatusStrip`).
 - `Station` — ICAO/name, distance, bearing + compass point, METAR age, far/stale warning.
-- `RawData` — collapsible raw METAR + TAF (monospace), copy button.
+- `RawData` — collapsed-by-default raw METAR + TAF (monospace, `forceMount` so it stays verbatim
+  in the DOM), copy button (a header sibling of the trigger, so it never toggles the panel).
 - `Location` — GPS button, manual lat/lon entry, nearby-station picker.
 - `ReloadPrompt` — reused from azimuth-ledger (prompt update toast).
 
