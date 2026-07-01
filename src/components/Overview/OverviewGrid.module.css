@@ -1,6 +1,7 @@
-/* Visual dashboard: four compact squarish tiles. 2×2 by default (mobile-first); a single row of
-   four only on wide desktop where each tile keeps roughly its mobile size, so the compass stays
-   as clear as on a phone. */
+/* Visual dashboard: four compact squarish tiles styled as small weather instruments.
+   2×2 by default (mobile-first); a single row of four only on wide desktop where each tile
+   keeps roughly its mobile size, so the compass stays as clear as on a phone.
+   All tints derive from theme tokens via color-mix — no standalone hardcoded hues. */
 
 /* minmax(0, 1fr) columns keep long content from blowing the grid out horizontally;
    1fr auto-rows make every tile the same height (the tallest tile's content sets it),
@@ -29,6 +30,28 @@
   flex-direction: column;
   gap: 8px;
   overflow-wrap: anywhere;
+}
+
+/* Themed washes: a faint token-tinted gradient at the top of the tile that fades into the
+   surface. Subtle by design — instrument mood, not decoration. */
+.tileSun {
+  background: linear-gradient(170deg, color-mix(in srgb, var(--sun) 11%, var(--surface)), var(--surface) 62%);
+}
+
+.tileMoon {
+  background: linear-gradient(170deg, color-mix(in srgb, var(--moon) 13%, var(--surface)), var(--surface) 62%);
+}
+
+.tileSky {
+  background: linear-gradient(170deg, color-mix(in srgb, var(--accent-sky) 10%, var(--surface)), var(--surface) 62%);
+}
+
+.tileStorm {
+  background: linear-gradient(170deg, color-mix(in srgb, var(--caution) 11%, var(--surface)), var(--surface) 62%);
+}
+
+.tileDim {
+  background: linear-gradient(170deg, color-mix(in srgb, var(--text-dim) 9%, var(--surface)), var(--surface) 62%);
 }
 
 .tileTitle {
@@ -66,17 +89,11 @@
   line-height: 1.35;
 }
 
-/* Short status line closing a tile: quiet by default, caution-toned when it warns. */
+/* Quiet closing line for a tile (non-warning insight). */
 .status {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-dim);
-}
-
-.statusWarn {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--caution);
 }
 
 .badge {
@@ -91,7 +108,7 @@
   padding: 1px 7px;
 }
 
-/* Compact fact chips (gusts, variable sector). */
+/* Compact fact/status chips. Tones color the text; the pill stays quiet. */
 .chips {
   display: flex;
   gap: 6px;
@@ -99,12 +116,16 @@
   justify-content: center;
 }
 
+.chipsLeft {
+  justify-content: flex-start;
+}
+
 .chip {
   font-size: 0.72rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   border: 1px solid var(--border);
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
   border-radius: 999px;
   padding: 2px 9px;
   white-space: nowrap;
@@ -118,6 +139,14 @@
   color: var(--caution);
 }
 
+.chipInfo {
+  color: var(--accent-sky);
+}
+
+.chipSun {
+  color: color-mix(in srgb, var(--sun) 80%, var(--text));
+}
+
 /* --- Current weather tile --- */
 
 .cwBody {
@@ -128,6 +157,48 @@
   justify-content: center;
   text-align: center;
   gap: 3px;
+}
+
+/* Soft condition-tinted halo behind the icon — the tile's "lens". */
+.iconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  margin-bottom: 2px;
+}
+
+.iconWrap::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+}
+
+.iconWrap svg {
+  position: relative;
+}
+
+.glowSun {
+  --glow: color-mix(in srgb, var(--sun) 30%, transparent);
+}
+
+.glowMoon {
+  --glow: color-mix(in srgb, var(--moon) 30%, transparent);
+}
+
+.glowSky {
+  --glow: color-mix(in srgb, var(--accent-sky) 26%, transparent);
+}
+
+.glowStorm {
+  --glow: color-mix(in srgb, var(--caution) 28%, transparent);
+}
+
+.glowDim {
+  --glow: color-mix(in srgb, var(--text-dim) 24%, transparent);
 }
 
 .cwCondition {
@@ -143,7 +214,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 7px;
+  gap: 8px;
 }
 
 .glyphRow {
@@ -171,10 +242,19 @@
   line-height: 1.1;
 }
 
-.humidityLabel {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-dim);
+/* Small moisture scale under the humidity number. */
+.rhBar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.rhFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-sky) 55%, var(--surface-2)), var(--accent-sky));
 }
 
 /* --- Wind tile --- */
@@ -185,14 +265,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   text-align: center;
 }
 
 .compass {
-  width: 100px;
-  height: 100px;
-  margin-bottom: 2px;
+  width: 108px;
+  height: 108px;
+  margin-bottom: 3px;
 }
 
 .speedRow {
@@ -203,7 +283,7 @@
 }
 
 .windFrom {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 600;
 }
 
@@ -211,13 +291,14 @@
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--text-dim);
+  margin-bottom: 2px;
 }
 
 /* --- Daylight tile --- */
 
 .arc {
   width: 100%;
-  max-width: 140px;
+  max-width: 150px;
   margin: 0 auto;
   display: block;
 }
@@ -240,26 +321,44 @@
   fill: var(--sun);
 }
 
+/* Soft halo around the sun marker so it reads as the light source. */
+.arcSunGlow {
+  fill: color-mix(in srgb, var(--sun) 35%, transparent);
+}
+
 .arcHorizon {
   stroke: var(--border);
   stroke-width: 1.5;
+}
+
+.arcLabel {
+  font-size: 6.5px;
+  font-weight: 600;
+  fill: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .arcMoon {
   stroke: var(--moon);
   stroke-width: 1.6;
   fill: var(--moon);
-  fill-opacity: 0.15;
+  fill-opacity: 0.2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.arcStar {
+  fill: var(--moon);
+  opacity: 0.55;
 }
 
 .dlBody {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
   text-align: center;
 }
 

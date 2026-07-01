@@ -42,20 +42,22 @@ describe('OverviewGrid', () => {
     expect(txt).toContain('Partly cloudy');
     expect(txt).toContain('20');
     expect(txt).toContain('No rain now');
-    // Thermo: RH from 20/18 ≈ 88%, dew point + spread + moisture status.
+    // Thermo: RH from 20/18 ≈ 88%, dew point + spread + human moisture status.
     expect(txt).toMatch(/8[78]%/);
     expect(txt).toContain('Dew 18°C · Δ 2°C');
-    expect(txt).toContain('Some moisture');
+    expect(txt).toContain('Very humid');
     // Wind: 4 kt ≈ 2.1 m/s, explicit From/Drifts bearings, variable sector chip.
     expect(txt).toContain('2.1');
     expect(txt).toContain('m/s');
     expect(txt).toContain('From 130° SE');
     expect(txt).toContain('Drifts 310° NW');
     expect(txt).toContain('Var 90–150°');
-    // Daylight: phase + sunset + remaining time.
+    // Daylight: phase, sunrise/sunset at the arc's feet, remaining time, golden-hour range chip.
     expect(txt).toContain('Daylight');
-    expect(txt).toMatch(/Sunset \d{2}:\d{2}/);
+    expect(txt).toMatch(/↑\d{2}:\d{2}/);
+    expect(txt).toMatch(/↓\d{2}:\d{2}/);
     expect(txt).toMatch(/left/);
+    expect(txt).toMatch(/Golden \d{2}:\d{2}–\d{2}:\d{2}/);
   });
 
   it('respects the selected wind unit', () => {

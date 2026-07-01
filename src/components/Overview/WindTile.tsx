@@ -22,7 +22,7 @@ export function WindTile({ wind }: { wind: Wind }) {
   const driftDeg = wind.dirDeg != null ? (wind.dirDeg + 180) % 360 : null;
 
   return (
-    <div className={styles.tile}>
+    <div className={`${styles.tile} ${styles.tileSky}`}>
       <h3 className={styles.tileTitle}>Wind</h3>
       <div className={styles.windBody}>
         <CompassSvg wind={wind} className={styles.compass} />

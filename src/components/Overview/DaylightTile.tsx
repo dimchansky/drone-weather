@@ -1,7 +1,9 @@
-// Light availability at a glance: the current phase, a mini sun arc with sunrise→sunset progress,
-// the next important event big (remaining daylight while the sun is up, the next sunrise when it
-// is down), and civil-dawn/dusk + golden-hour context lines. Times use the flight-site local time.
-// Dawn/golden for "tomorrow" reuse the existing sunTimes() for the next-sunrise day.
+// Light availability as an instrument: a sun arc with sunrise/sunset times at its feet and the
+// sun's live position by day; moon and faint stars by night. Below it: the phase, the next
+// important number big (daylight remaining, or the next sunrise), and unambiguous chips —
+// golden hour always as an explicit time RANGE, civil dawn / full dark as labelled times.
+// All times in flight-site local time; "tomorrow's" dawn/golden reuse sunTimes() for the
+// next-sunrise day.
 
 import type { Coord, LocationTime } from '../../domain/types';
 import type { Daylight, DaylightPhase } from '../../domain/sun';
@@ -35,6 +37,7 @@ export function DaylightTile({
   const { times, phase, polar } = daylight;
   const progress = sunArcProgress(now, times.sunrise, times.sunset);
   const t = (d: Date | null) => (d ? fmtTimeInZone(d, locationTime) : '—');
+  const range = (a: Date | null, b: Date | null) => `${t(a)}–${t(b)}`;
 
   const sunX = progress != null ? 50 - 40 * Math.cos(Math.PI * progress) : null;
   const sunY = progress != null ? 50 - 40 * Math.sin(Math.PI * progress) : null;
@@ -45,24 +48,25 @@ export function DaylightTile({
   const nextTimes = !sunUp && daylight.nextSunrise ? sunTimes(daylight.nextSunrise, coord) : null;
   const eveningTwilight = phase === 'civilTwilight' && now > times.solarNoon;
 
-  const context: string[] = [];
+  const chips: { text: string; sun?: boolean }[] = [];
   if (polar == null) {
     if (sunUp) {
-      context.push(`Sunset ${t(times.sunset)}`);
-      if (times.goldenEveningStart && now < times.goldenEveningStart) {
-        context.push(`Golden ${t(times.goldenEveningStart)}`);
+      if (times.goldenEveningStart && times.sunset && now < times.goldenEveningStart) {
+        chips.push({ text: `Golden ${range(times.goldenEveningStart, times.sunset)}`, sun: true });
       }
     } else {
-      if (eveningTwilight && times.civilDusk) context.push(`Dark ${t(times.civilDusk)}`);
-      if (nextTimes?.civilDawn) context.push(`Dawn ${t(nextTimes.civilDawn)}`);
-      if (nextTimes?.goldenMorningEnd) context.push(`Golden till ${t(nextTimes.goldenMorningEnd)}`);
+      if (eveningTwilight && times.civilDusk) chips.push({ text: `Dark ${t(times.civilDusk)}` });
+      if (nextTimes?.civilDawn) chips.push({ text: `Dawn ${t(nextTimes.civilDawn)}` });
+      if (nextTimes?.sunrise && nextTimes.goldenMorningEnd) {
+        chips.push({ text: `Golden ${range(nextTimes.sunrise, nextTimes.goldenMorningEnd)}`, sun: true });
+      }
     }
   }
 
   return (
-    <div className={styles.tile}>
+    <div className={`${styles.tile} ${sunUp ? styles.tileSun : styles.tileMoon}`}>
       <h3 className={styles.tileTitle}>Daylight</h3>
-      <svg viewBox="0 0 100 56" className={styles.arc} role="img" aria-label={`Daylight: ${PHASE_LABEL[phase]}`}>
+      <svg viewBox="0 0 100 60" className={styles.arc} role="img" aria-label={`Daylight: ${PHASE_LABEL[phase]}`}>
         <line x1="4" y1="50" x2="96" y2="50" className={styles.arcHorizon} />
         <path d="M 10 50 A 40 40 0 0 1 90 50" className={styles.arcTrack} />
         {progress != null && (
@@ -72,10 +76,30 @@ export function DaylightTile({
             strokeDasharray={`${ARC_LEN * progress} ${ARC_LEN}`}
           />
         )}
-        {sunX != null && sunY != null && <circle cx={sunX} cy={sunY} r="4.5" className={styles.arcSun} />}
+        {sunX != null && sunY != null && (
+          <>
+            <circle cx={sunX} cy={sunY} r="8" className={styles.arcSunGlow} />
+            <circle cx={sunX} cy={sunY} r="4.5" className={styles.arcSun} />
+          </>
+        )}
+        {sunUp && times.sunrise && times.sunset && (
+          <>
+            <text x="10" y="58" textAnchor="middle" className={styles.arcLabel}>
+              ↑{t(times.sunrise)}
+            </text>
+            <text x="90" y="58" textAnchor="middle" className={styles.arcLabel}>
+              ↓{t(times.sunset)}
+            </text>
+          </>
+        )}
         {progress == null && (
-          // Sun below the horizon (or polar night): a moon sits mid-arc instead of the sun marker.
-          <path d={MOON_PATH} className={styles.arcMoon} transform="translate(41.5 12) scale(0.75)" />
+          // Sun below the horizon (or polar night): moon and faint stars instead of the sun marker.
+          <>
+            <path d={MOON_PATH} className={styles.arcMoon} transform="translate(41.5 12) scale(0.75)" />
+            <circle cx="26" cy="24" r="0.9" className={styles.arcStar} />
+            <circle cx="71" cy="18" r="0.9" className={styles.arcStar} />
+            <circle cx="63" cy="33" r="0.7" className={styles.arcStar} />
+          </>
         )}
       </svg>
       <div className={styles.dlBody}>
@@ -92,19 +116,24 @@ export function DaylightTile({
             <div className={styles.sub}>Polar night — no sunrise</div>
           </>
         )}
-        {polar == null && (
-          <>
-            {sunUp ? (
-              <div className={styles.dlRemaining}>
-                {fmtDuration(daylight.daylightRemainingMin!)} left
-              </div>
-            ) : (
-              <div className={styles.dlRemaining}>
-                {daylight.nextSunrise ? `Sunrise ${t(daylight.nextSunrise)}` : '—'}
-              </div>
-            )}
-            {context.length > 0 && <div className={styles.sub}>{context.join(' · ')}</div>}
-          </>
+        {polar == null &&
+          (sunUp ? (
+            <div className={styles.dlRemaining}>
+              {fmtDuration(daylight.daylightRemainingMin!)} left
+            </div>
+          ) : (
+            <div className={styles.dlRemaining}>
+              {daylight.nextSunrise ? `Sunrise ${t(daylight.nextSunrise)}` : '—'}
+            </div>
+          ))}
+        {chips.length > 0 && (
+          <div className={styles.chips}>
+            {chips.map((c) => (
+              <span key={c.text} className={`${styles.chip}${c.sun ? ` ${styles.chipSun}` : ''}`}>
+                {c.text}
+              </span>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -15,12 +15,14 @@
 
 .icon .sun {
   stroke: var(--sun);
+  fill: var(--sun);
+  fill-opacity: 0.22;
 }
 
 .icon .moon {
   stroke: var(--moon);
   fill: var(--moon);
-  fill-opacity: 0.15;
+  fill-opacity: 0.25;
 }
 
 .icon .cloud {
@@ -30,6 +32,7 @@
 
 .icon .drop {
   stroke: var(--accent-sky);
+  stroke-width: 2.2;
 }
 
 .icon .flake {
@@ -39,6 +42,8 @@
 
 .icon .bolt {
   stroke: var(--caution);
+  fill: var(--caution);
+  fill-opacity: 0.25;
 }
 
 .icon .fogLine {
