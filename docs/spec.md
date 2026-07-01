@@ -386,8 +386,8 @@ getSurfaceFallback(at: Coord): Promise<Partial<Metar>>  // when no nearby METAR 
 
 1. **Decision** — `DecisionBanner`.
 2. **Decision support** (compact strips, always visible) — `StatusStrip` → `PrecipNowPill` →
-   `RiskFactors` → `VerticalHazardStrip` → `WindCompass`; reserved slots for the Iteration-2
-   daylight and Iteration-3 forecast strips.
+   `DaylightStrip` → `RiskFactors` → `VerticalHazardStrip` → `WindCompass`; reserved slot for the
+   Iteration-3 forecast strip.
 3. **Technical detail** (collapsible `Card`, collapsed by default) — `VerticalAnalyzer` →
    `Clouds` → `ThermoMoisture` → `Station` → **Raw METAR/TAF** → disclaimer/version footer.
 

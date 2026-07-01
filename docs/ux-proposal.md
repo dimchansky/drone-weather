@@ -1,6 +1,6 @@
 # Drone Weather — Decision-first UX proposal
 
-> Status: **Iteration 1 landed (2026-07-01).** Iterations 2–3 are planned. This doc records the
+> Status: **Iterations 1–2 landed (2026-07-01).** Iteration 3 is planned. This doc records the
 > information architecture; the function-level contracts live in [spec.md](spec.md) (see §8).
 
 ## Why
@@ -38,6 +38,9 @@ sources always labelled; the raw METAR always available verbatim.
 - `VerticalHazardStrip` — the ops-band conclusion in one line (*"Ops band 0–120 m: low vertical
   hazard · cloud base above ops ceiling"*), so the app's unique vertical signal stays visible even
   though the full chart is collapsed below.
+- `DaylightStrip` *(Iteration 2)* — sunrise/sunset · daylight remaining · golden-hour window, or a
+  night/twilight advisory. Colored by the daylight severity (CAUTION in twilight/night, never
+  NO-FLY). Times are **device-local** and the strip says so.
 - `WindCompass` — the wind visualization + route advice.
 
 **Layer 3 — Technical detail** (collapsible `Card`, collapsed by default; one tap to open)
@@ -68,10 +71,10 @@ Confidence factors (freshness/distance) drive the `StatusStrip`, not the main is
 
 - **Iteration 1 (done):** the three layers, dominant reason + advice with magnitude, compact QNH,
   source-explicit precip-now, visible confidence + vertical-hazard summaries.
-- **Iteration 2:** daylight / sunrise-sunset / civil twilight / golden hour — a pure `domain/sun.ts`
-  (NOAA solar equations, offline, device-local time labelled as such, tz-swappable), a Layer-2
-  `DaylightStrip` + the reserved banner line. Darkness raises CAUTION (usable light), never
-  auto-NO-FLY.
+- **Iteration 2 (done):** daylight / sunrise-sunset / civil twilight / golden hour — a pure
+  `domain/sun.ts` (NOAA solar equations, offline, device-local time labelled as such, tz-swappable),
+  a Layer-2 `DaylightStrip` + the banner secondary line. Twilight/night raise a CAUTION **advisory**
+  (colored strip + banner line), never auto-NO-FLY; the weather verdict chip stays weather-only.
 - **Iteration 3:** short-term forecast (next 1–3 h) — Open-Meteo hourly look-ahead (+ `wind_gusts_10m`),
   a pure `domain/forecast.ts` trend summary, a Layer-2 `ForecastStrip` + the reserved banner line.
 - **Future (unscheduled):** aircraft profiles (Generic / C0 / custom), true location timezone, a
