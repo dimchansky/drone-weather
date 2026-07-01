@@ -40,15 +40,19 @@ describe('DecisionBanner', () => {
     expect(screen.getByText('Reduced confidence')).toBeInTheDocument();
   });
 
-  it('renders an optional secondary line (e.g. the daylight summary)', () => {
+  it('renders optional secondary lines (e.g. daylight + forecast)', () => {
     const b = brief('EGLL 281250Z 27006KT CAVOK 20/07 Q1015');
     render(
       <DecisionBanner
         risk={b.risk}
         wind={b.metar.wind}
-        secondary={{ text: 'Daylight OK · sunset in 6h 20m', severity: 'GOOD' }}
+        secondary={[
+          { text: 'Daylight OK · sunset in 6h 20m', severity: 'GOOD' },
+          { text: 'Model: rain likely in ~45m', severity: 'CAUTION' },
+        ]}
       />,
     );
     expect(screen.getByText('Daylight OK · sunset in 6h 20m')).toBeInTheDocument();
+    expect(screen.getByText('Model: rain likely in ~45m')).toBeInTheDocument();
   });
 });

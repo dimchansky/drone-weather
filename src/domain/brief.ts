@@ -1,7 +1,7 @@
 // Brief assembler — pure composition of the domain pieces into the object the UI renders.
 // The async fetching lives in the store; this stays pure and testable. See docs/spec.md §7.
 
-import type { Coord, Metar, ModelConditions, ProfileLevel, RiskSummary, Taf, VerticalProfile } from './types';
+import type { Coord, ForecastHour, Metar, ModelConditions, ProfileLevel, RiskSummary, Taf, VerticalProfile } from './types';
 import { mergeModelProfile, lapseProfile } from './profile';
 import { icingBand, type IcingBand } from './icing';
 import { resolveCloudBase, type ResolvedCloudBase } from './clouds';
@@ -26,6 +26,7 @@ export interface Brief {
   cloudBase: ResolvedCloudBase;
   risk: RiskSummary;
   model: ModelConditions | null; // kept so risk can be recomputed live (freshness + dew)
+  forecast: ForecastHour[]; // short-term model look-ahead window (summarized live in the UI)
   opsCeilingM: number; // kept so the risk can be recomputed live (freshness)
   fetchedAt: Date;
 }
@@ -37,6 +38,7 @@ export interface AssembleInput {
   taf?: Taf | null;
   modelLevels: ProfileLevel[];
   model?: ModelConditions | null;
+  forecast?: ForecastHour[];
   station?: StationRef | null;
   distanceKm?: number | null;
   opsCeilingM?: number;
@@ -80,6 +82,7 @@ export function assembleBrief(input: AssembleInput): Brief {
     cloudBase,
     risk,
     model,
+    forecast: input.forecast ?? [],
     opsCeilingM,
     fetchedAt: now,
   };

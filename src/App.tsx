@@ -7,6 +7,7 @@ import { icingBand } from './domain/icing';
 import { precipNow } from './domain/precip';
 import { opsBandHazard } from './domain/vertical';
 import { daylight, daylightSeverity } from './domain/sun';
+import { summarizeForecast } from './domain/forecast';
 import { useBriefStore } from './store/briefStore';
 import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
@@ -18,6 +19,9 @@ import { StatusStrip } from './components/Status/StatusStrip';
 import { PrecipNowPill } from './components/Precip/PrecipNowPill';
 import { DaylightStrip } from './components/Daylight/DaylightStrip';
 import { daylightBannerLine } from './components/Daylight/daylightText';
+import { ForecastStrip } from './components/Forecast/ForecastStrip';
+import { forecastBannerNote } from './components/Forecast/forecastText';
+import type { SecondaryLine } from './components/Risk/DecisionBanner';
 import { WindCompass } from './components/Wind/WindCompass';
 import { StationCard } from './components/Station/StationCard';
 import { VerticalAnalyzer } from './components/Vertical/VerticalAnalyzer';
@@ -64,6 +68,18 @@ export function App() {
   // remaining daylight, and golden-hour window stay live. Times are rendered device-local.
   const dl = useMemo(() => (brief ? daylight(now, brief.coord) : null), [brief, now]);
 
+  // Short-term model forecast summary (pure). Recomputes on the clock tick so "rain in ~X min"
+  // stays live; wind values are formatted per unit in the strip/note.
+  const fc = useMemo(() => (brief ? summarizeForecast(now, brief.forecast) : null), [brief, now]);
+
+  // Banner secondary lines: daylight (always) + a short forecast note only when it's notable.
+  const secondary: SecondaryLine[] = [];
+  if (dl) secondary.push({ text: daylightBannerLine(dl, now), severity: daylightSeverity(dl.phase) });
+  if (fc) {
+    const note = forecastBannerNote(fc, windUnit);
+    if (note) secondary.push({ text: note, severity: fc.severity });
+  }
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
@@ -104,17 +120,12 @@ export function App() {
             )}
 
             {/* Layer 1 — the decision */}
-            <DecisionBanner
-              risk={liveRisk ?? brief.risk}
-              wind={brief.metar.wind}
-              secondary={
-                dl ? { text: daylightBannerLine(dl, now), severity: daylightSeverity(dl.phase) } : undefined
-              }
-            />
+            <DecisionBanner risk={liveRisk ?? brief.risk} wind={brief.metar.wind} secondary={secondary} />
 
             {/* Layer 2 — decision support (compact, always visible) */}
             <StatusStrip brief={brief} now={now} />
             <PrecipNowPill precip={precipNow(brief.metar, brief.model)} />
+            {fc && <ForecastStrip forecast={fc} windUnit={windUnit} />}
             {dl && <DaylightStrip daylight={dl} />}
             <RiskFactors risk={liveRisk ?? brief.risk} />
             <VerticalHazardStrip

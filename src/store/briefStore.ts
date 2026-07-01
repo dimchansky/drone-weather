@@ -2,7 +2,13 @@ import { create } from 'zustand';
 import type { Coord, Metar } from '../domain/types';
 import { assembleBrief, type Brief, type StationRef } from '../domain/brief';
 import { nearestStations, getTaf, type NearbyStation } from '../data/noaa';
-import { getProfile, getSurfaceFallback, getModelConditions, type SurfaceFallback } from '../data/openMeteo';
+import {
+  getProfile,
+  getSurfaceFallback,
+  getModelConditions,
+  getForecastWindow,
+  type SurfaceFallback,
+} from '../data/openMeteo';
 
 const SEARCH_RADIUS_KM = 80;
 
@@ -70,10 +76,11 @@ export const useBriefStore = create<BriefState>((set, get) => ({
         // Prefer the user's pinned station if it's still in range; else nearest.
         const chosen =
           (opts.selectedIcao && nearby.find((n) => n.metar.icao === opts.selectedIcao)) || nearby[0];
-        const [taf, modelLevels, model] = await Promise.all([
+        const [taf, modelLevels, model, forecast] = await Promise.all([
           getTaf(chosen.metar.icao, { force }).catch(() => null),
           getProfile(coord, { force }).catch(() => []),
           getModelConditions(coord, { force }).catch(() => null),
+          getForecastWindow(coord, { force }).catch(() => []),
         ]);
         const station: StationRef = {
           icao: chosen.metar.icao,
@@ -89,6 +96,7 @@ export const useBriefStore = create<BriefState>((set, get) => ({
           taf,
           modelLevels,
           model,
+          forecast,
           station,
           opsCeilingM: opts.opsCeilingM,
           now,
@@ -98,10 +106,11 @@ export const useBriefStore = create<BriefState>((set, get) => ({
       }
 
       // No nearby METAR station — fall back to a model-only brief.
-      const [surface, modelLevels, model] = await Promise.all([
+      const [surface, modelLevels, model, forecast] = await Promise.all([
         getSurfaceFallback(coord, { force }),
         getProfile(coord, { force }).catch(() => []),
         getModelConditions(coord, { force }).catch(() => null),
+        getForecastWindow(coord, { force }).catch(() => []),
       ]);
       const brief = assembleBrief({
         coord,
@@ -110,6 +119,7 @@ export const useBriefStore = create<BriefState>((set, get) => ({
         taf: null,
         modelLevels,
         model,
+        forecast,
         station: null,
         distanceKm: null,
         opsCeilingM: opts.opsCeilingM,

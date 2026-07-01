@@ -18,15 +18,20 @@ function mainIssue(primary: RiskComponent, wind: Wind): string {
  * Layer 1 — the decision anchor: big GOOD/CAUTION/NO-FLY verdict, the single dominant reason with
  * its magnitude, short hedged advice, and a reduced-confidence note. Decision support only.
  */
+export interface SecondaryLine {
+  text: string;
+  severity: Severity;
+}
+
 export function DecisionBanner({
   risk,
   wind,
-  secondary,
+  secondary = [],
 }: {
   risk: RiskSummaryT;
   wind: Wind;
-  /** Secondary at-a-glance line (Iteration 2 daylight; Iteration 3 forecast). Colored when > GOOD. */
-  secondary?: { text: string; severity: Severity };
+  /** At-a-glance secondary lines (Iteration 2 daylight, Iteration 3 forecast). Colored when > GOOD. */
+  secondary?: SecondaryLine[];
 }) {
   return (
     <section className={styles.wrap} style={{ borderColor: SEVERITY_VAR[risk.overall] }}>
@@ -43,14 +48,15 @@ export function DecisionBanner({
 
       <p className={styles.advice}>{risk.advice}</p>
 
-      {secondary && (
+      {secondary.map((line, i) => (
         <p
+          key={i}
           className={styles.secondary}
-          style={secondary.severity !== 'GOOD' ? { color: SEVERITY_VAR[secondary.severity] } : undefined}
+          style={line.severity !== 'GOOD' ? { color: SEVERITY_VAR[line.severity] } : undefined}
         >
-          {secondary.text}
+          {line.text}
         </p>
-      )}
+      ))}
     </section>
   );
 }
