@@ -237,10 +237,12 @@
 }
 
 /* Thermo rows: fixed glyph column so all values share one vertical axis regardless of the
-   glyph's optical width. */
+   glyph's optical width. minmax(0, 1fr) is load-bearing: a plain 1fr track has an `auto`
+   minimum, so a nowrap chip inside would inflate the column past the tile — clamped to 0,
+   the bar and chip stay contained in the content column instead. */
 .thermoRow {
   display: grid;
-  grid-template-columns: 22px 1fr;
+  grid-template-columns: 22px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
 }
@@ -252,6 +254,16 @@
 .rhBar,
 .moistureChip {
   margin-top: 4px;
+}
+
+/* Moisture status chip: slightly more compact than fact chips so "Near saturation" fits the
+   content column at the tightest (desktop 1×4) tile width; ellipsis is a safety net only. */
+.moistureChip .chip {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .glyphTemp {

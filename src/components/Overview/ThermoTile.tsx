@@ -20,7 +20,8 @@ export function moistureStatus(spread: number, rh: number): { text: string; tone
   if (spread < 2) return { text: 'Near saturation', tone: 'warn' };
   if (rh >= 85) return { text: 'Very humid', tone: 'info' };
   if (spread > 5) return { text: 'Dry air', tone: 'ok' };
-  return { text: 'Moderate humidity', tone: 'ok' };
+  // "Moderate" (not "Moderate humidity") — the long form overflows the narrowest tile width.
+  return { text: 'Moderate', tone: 'ok' };
 }
 
 const TONE_CLASS: Record<MoistureTone, string> = {
