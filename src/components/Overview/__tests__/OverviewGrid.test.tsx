@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { OverviewGrid } from '../OverviewGrid';
+import { rainSoonChip } from '../CurrentWeatherTile';
 import { assembleBrief, type StationRef } from '../../../domain/brief';
 import { daylight } from '../../../domain/sun';
 import { summarizeForecast } from '../../../domain/forecast';
@@ -85,6 +86,20 @@ describe('OverviewGrid', () => {
     const b = brief('EYVI 281250Z 13004KT 9999 SCT030 20/19 Q1015');
     grid(b);
     expect(document.body.textContent).toContain('Near saturation');
+  });
+
+  it('imminent rain onset reads "Rain any moment", never "Rain in ~0m"', () => {
+    // An hour bucket at "now" with likely precip → rainOnsetMin 0.
+    const fc = summarizeForecast(NOW, [
+      { time: NOW, windKt: 8, gustKt: null, precipMm: 0.5, precipProb: 80 },
+    ]);
+    expect(fc.rainOnsetMin).toBe(0);
+    expect(rainSoonChip('cloud', fc)).toBe('Rain any moment');
+    expect(rainSoonChip('cloud', { ...fc, rainOnsetMin: 4 })).toBe('Rain any moment');
+    expect(rainSoonChip('cloud', { ...fc, rainOnsetMin: 45 })).toBe('Rain in ~45m');
+    // Already-precipitating conditions still own the story — no chip.
+    expect(rainSoonChip('rain', fc)).toBeNull();
+    expect(rainSoonChip('cloud', null)).toBeNull();
   });
 
   it('shows the model rain onset as the current-weather insight', () => {

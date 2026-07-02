@@ -30,11 +30,13 @@ const TONE: Record<ConditionIcon, { tile: string; glow: string }> = {
 
 /**
  * Rain-ahead chip text (future tense, from the model forecast window) — null when it's already
- * precipitating (the condition label owns that story) or nothing is coming.
+ * precipitating (the condition label owns that story) or nothing is coming. Onsets inside the
+ * next few minutes read "Rain any moment" — "Rain in ~0m" is technically true but silly.
  */
 export function rainSoonChip(icon: ConditionIcon, forecast: ForecastSummary | null): string | null {
   if (PRECIP_ICONS.includes(icon)) return null;
   if (forecast?.available && forecast.rainOnsetMin != null) {
+    if (forecast.rainOnsetMin < 5) return 'Rain any moment';
     return `Rain in ~${fmtDuration(forecast.rainOnsetMin)}`;
   }
   return null;
