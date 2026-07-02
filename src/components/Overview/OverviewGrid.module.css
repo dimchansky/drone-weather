@@ -271,11 +271,21 @@
   flex: 0 0 auto;
 }
 
-/* Labelled mini-fact columns (Dew / Spread) — same pattern as the wind bearings. */
-.miniFacts {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 1px 18px;
+/* Labelled mini-fact rows (Dew / Spread): label left, value right, hard nowrap on both — a
+   narrow square tile can't break "16.8°C" or "SPREAD" mid-token (the tile itself allows
+   overflow-wrap: anywhere, so these rows must opt out explicitly). */
+.factRows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.factRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .miniLabel {
@@ -284,12 +294,14 @@
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .miniValue {
   font-size: 0.84rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .humidity {

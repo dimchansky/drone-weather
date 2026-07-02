@@ -73,14 +73,17 @@ export function ThermoTile({ metar, model }: { metar: Metar; model: ModelConditi
         {dewpC != null ? (
           <div className={styles.thermoRow}>
             <Glyph kind="dewpoint" className={styles.glyphDew} size={16} />
-            <div className={styles.miniFacts}>
-              <div>
-                <div className={styles.miniLabel}>Dew</div>
-                <div className={styles.miniValue}>{round(dewpC, 1)}°C</div>
+            {/* Stacked label/value rows: side-by-side columns get fragile in a narrow square
+                tile once decimals appear (the tile allows overflow-wrap, so tight columns broke
+                letter-by-letter). Rows + nowrap can't wrap awkwardly at any width. */}
+            <div className={styles.factRows}>
+              <div className={styles.factRow}>
+                <span className={styles.miniLabel}>Dew</span>
+                <span className={styles.miniValue}>{round(dewpC, 1)}°C</span>
               </div>
-              <div>
-                <div className={styles.miniLabel}>Spread</div>
-                <div className={styles.miniValue}>{spread}°C</div>
+              <div className={styles.factRow}>
+                <span className={styles.miniLabel}>Spread</span>
+                <span className={styles.miniValue}>{spread}°C</span>
               </div>
             </div>
           </div>
