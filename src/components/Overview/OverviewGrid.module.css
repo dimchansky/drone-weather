@@ -236,6 +236,24 @@
   gap: 8px;
 }
 
+/* Thermo rows: fixed glyph column so all values share one vertical axis regardless of the
+   glyph's optical width. */
+.thermoRow {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.thermoRow > svg {
+  justify-self: center;
+}
+
+.rhBar,
+.moistureChip {
+  margin-top: 4px;
+}
+
 .glyphTemp {
   color: var(--high);
   opacity: 0.9;
@@ -469,4 +487,8 @@
   font-size: 1.15rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.noWrap {
+  white-space: nowrap;
 }

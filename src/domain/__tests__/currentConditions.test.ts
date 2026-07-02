@@ -28,10 +28,13 @@ describe('currentConditions — observed METAR weather', () => {
     });
   });
 
-  it('heavy thunderstorm', () => {
+  it('TS intensity qualifies the precipitation, never the storm itself', () => {
     expect(day('KMCI 281200Z 18010KT 4000 +TSRA BKN020CB 25/20 Q1010')).toEqual({
-      icon: 'thunder', label: 'Heavy thunderstorm', source: 'metar',
+      icon: 'thunder', label: 'Thunderstorm, heavy rain', source: 'metar',
     });
+    expect(day('KMCI 281200Z 18010KT 6000 -TSRA BKN025CB 25/20 Q1010').label).toBe(
+      'Thunderstorm, light rain',
+    );
   });
 
   it('thunderstorm beats rain and cloud cover', () => {
@@ -40,9 +43,9 @@ describe('currentConditions — observed METAR weather', () => {
     expect(r.label).toBe('Thunderstorm');
   });
 
-  it('CB cloud without a TS weather group still reads as thunderstorm', () => {
+  it('CB cloud without a TS weather group reads as storm clouds, not an observed storm', () => {
     const r = day('EYVI 281200Z 18010KT 9999 BKN020CB 20/15 Q1012');
-    expect(r).toMatchObject({ icon: 'thunder', source: 'metar' });
+    expect(r).toEqual({ icon: 'thunder', label: 'Storm clouds (CB)', source: 'metar' });
   });
 
   it('freezing rain', () => {

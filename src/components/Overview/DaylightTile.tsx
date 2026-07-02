@@ -88,11 +88,13 @@ export function DaylightTile({
           </>
         )}
         {sunUp && times.sunrise && times.sunset && (
+          // start/end anchors keep the labels inside the 0–100 viewBox (centering on the arc
+          // feet clipped them at the edges).
           <>
-            <text x="10" y="58" textAnchor="middle" className={styles.arcLabel}>
+            <text x="3" y="58" textAnchor="start" className={styles.arcLabel}>
               ↑{t(times.sunrise)}
             </text>
-            <text x="90" y="58" textAnchor="middle" className={styles.arcLabel}>
+            <text x="97" y="58" textAnchor="end" className={styles.arcLabel}>
               ↓{t(times.sunset)}
             </text>
           </>
@@ -109,7 +111,7 @@ export function DaylightTile({
             {polar == null && daylight.nextSunrise && (
               <>
                 <path d="M 6 50 A 4 4 0 0 1 14 50 Z" className={styles.arcRise} />
-                <text x="10" y="58" textAnchor="middle" className={styles.arcLabelSun}>
+                <text x="3" y="58" textAnchor="start" className={styles.arcLabelSun}>
                   ↑{t(daylight.nextSunrise)}
                 </text>
               </>
@@ -137,7 +139,7 @@ export function DaylightTile({
               {/* Relative first — "how long do I have" is the human question; clock time sits
                   at the arc's ↓ label. */}
               <div className={styles.dlRemaining}>
-                Sunset in {fmtDuration(daylight.daylightRemainingMin!)}
+                Sunset <span className={styles.noWrap}>in {fmtDuration(daylight.daylightRemainingMin!)}</span>
               </div>
             </>
           ) : (

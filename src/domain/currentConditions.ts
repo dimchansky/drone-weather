@@ -94,7 +94,16 @@ export function currentConditions(
     const intensity = wx ? intensityPrefix(wx.intensity) : '';
 
     if (hasThunderstorm(metar)) {
-      return { icon: 'thunder', label: cap(`${intensity}thunderstorm`.trim()), source: 'metar' };
+      // A CB cloud layer without a TS weather group is convective cloud, not an observed storm.
+      if (!metar.weather.some((w) => w.descriptor === 'TS')) {
+        return { icon: 'thunder', label: 'Storm clouds (CB)', source: 'metar' };
+      }
+      // METAR intensity on a TS group qualifies the PRECIPITATION, not the storm — "-TSRA" is a
+      // thunderstorm with light rain, never a "light thunderstorm".
+      const label = hasPrecip(metar) && intensity
+        ? `Thunderstorm, ${intensity.toLowerCase()}${precipTypeLabel(metar)}`
+        : 'Thunderstorm';
+      return { icon: 'thunder', label, source: 'metar' };
     }
     if (hasFreezingFog(metar)) return { icon: 'fog', label: 'Freezing fog', source: 'metar' };
     if (hasFreezingPrecip(metar)) {

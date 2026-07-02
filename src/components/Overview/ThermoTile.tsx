@@ -45,7 +45,9 @@ export function ThermoTile({ metar, model }: { metar: Metar; model: ModelConditi
     <div className={`${styles.tile} ${styles.tileSky}`}>
       <h3 className={styles.tileTitle}>Temp &amp; moisture</h3>
       <div className={styles.thermoBody}>
-        <div className={styles.glyphRow}>
+        {/* One glyph column + one content column: every number, the moisture bar, and the
+            status chip share the same vertical axis. */}
+        <div className={styles.thermoRow}>
           <Glyph kind="thermometer" className={styles.glyphTemp} />
           <span>
             <span className={styles.big}>{tempC != null ? round(tempC, 1) : '—'}</span>
@@ -53,18 +55,23 @@ export function ThermoTile({ metar, model }: { metar: Metar; model: ModelConditi
           </span>
         </div>
         {rh != null && (
-          <div>
-            <div className={styles.glyphRow}>
-              <Glyph kind="droplet" className={styles.glyphDrop} />
+          <div className={styles.thermoRow}>
+            <Glyph kind="droplet" className={styles.glyphDrop} />
+            <div>
               <span className={styles.humidity}>{rh}%</span>
-            </div>
-            <div className={styles.rhBar} role="img" aria-label={`Relative humidity ${rh}%`}>
-              <div className={styles.rhFill} style={{ width: `${rh}%` }} />
+              <div className={styles.rhBar} role="img" aria-label={`Relative humidity ${rh}%`}>
+                <div className={styles.rhFill} style={{ width: `${rh}%` }} />
+              </div>
+              {status && (
+                <div className={`${styles.chips} ${styles.chipsLeft} ${styles.moistureChip}`}>
+                  <span className={`${styles.chip} ${TONE_CLASS[status.tone]}`}>{status.text}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
         {dewpC != null ? (
-          <div className={styles.glyphRow}>
+          <div className={styles.thermoRow}>
             <Glyph kind="dewpoint" className={styles.glyphDew} size={16} />
             <div className={styles.miniFacts}>
               <div>
@@ -79,11 +86,6 @@ export function ThermoTile({ metar, model }: { metar: Metar; model: ModelConditi
           </div>
         ) : (
           <div className={styles.sub}>Dew point not reported</div>
-        )}
-        {status && (
-          <div className={`${styles.chips} ${styles.chipsLeft}`}>
-            <span className={`${styles.chip} ${TONE_CLASS[status.tone]}`}>{status.text}</span>
-          </div>
         )}
       </div>
     </div>

@@ -18,20 +18,30 @@
 
 .card {
   fill: var(--text-dim);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-anchor: middle;
-  opacity: 0.85;
+  opacity: 0.7;
 }
 
-/* North reads slightly stronger — the anchor of the instrument. */
+/* North anchors the instrument: strongest, with a subtle primary-accent tint (not a severity
+   color). South is next so the vertical axis reads at a glance; E/W stay quiet. */
 .cardNorth {
+  fill: color-mix(in srgb, var(--accent) 55%, var(--text));
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+}
+
+.cardSouth {
   fill: var(--text);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-anchor: middle;
+  opacity: 0.9;
 }
 
 /* Soft glow under the wind vector. */

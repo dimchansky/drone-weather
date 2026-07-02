@@ -58,15 +58,10 @@ export function CompassSvg({ wind, className }: { wind: Wind; className?: string
         return <line key={d} x1={o.x} y1={o.y} x2={inn.x} y2={inn.y} className={styles.tick} />;
       })}
       {CARDINALS.map(({ d, l }) => {
-        const p = pt(d, R - 15);
+        const p = pt(d, R - 14);
+        const cls = l === 'N' ? styles.cardNorth : l === 'S' ? styles.cardSouth : styles.card;
         return (
-          <text
-            key={l}
-            x={p.x}
-            y={p.y}
-            className={l === 'N' ? styles.cardNorth : styles.card}
-            dominantBaseline="central"
-          >
+          <text key={l} x={p.x} y={p.y} className={cls} dominantBaseline="central">
             {l}
           </text>
         );
