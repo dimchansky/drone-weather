@@ -47,6 +47,28 @@ describe('resolveTafTimeline — basics', () => {
   });
 });
 
+describe('resolveTafTimeline — convective cloud exposure (for UI chips)', () => {
+  it('CB layer without a TS group: thunderstorm hazard, tsGroup false, base exposed', () => {
+    const r = resolveTafTimeline(taf('EYVI 280500Z 2806/2906 27008KT 9999 BKN015CB'), NOW);
+    expect(r.segments[0].hazards).toContain('thunderstorm');
+    expect(r.segments[0].tsGroup).toBe(false);
+    expect(r.segments[0].cbBaseFt).toBe(1500);
+  });
+
+  it('TS weather group sets tsGroup true', () => {
+    const r = resolveTafTimeline(taf('EYVI 280500Z 2806/2906 27008KT 5000 TSRA BKN008CB'), NOW);
+    expect(r.segments[0].tsGroup).toBe(true);
+    expect(r.segments[0].cbBaseFt).toBe(800);
+  });
+
+  it('TCU is exposed with its base even though it is not a hazard kind', () => {
+    const r = resolveTafTimeline(taf('EYVI 280500Z 2806/2906 27008KT 9999 SCT020TCU'), NOW);
+    expect(r.segments[0].hazards).toEqual([]);
+    expect(r.segments[0].tcuBaseFt).toBe(2000);
+    expect(r.segments[0].cbBaseFt).toBeUndefined();
+  });
+});
+
 describe('resolveTafTimeline — FM (full replacement)', () => {
   it('FM introduces gusts mid-horizon; weather/clouds are fully replaced', () => {
     const r = resolveTafTimeline(

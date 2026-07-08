@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
-import { ForecastTimelineCard } from '../ForecastTimelineCard';
+import { ForecastTimelineCard, assignRows, bandChips } from '../ForecastTimelineCard';
+import type { TafBandOverlay } from '../../../domain/tafTimeline';
 import { assembleBrief, type StationRef } from '../../../domain/brief';
 import { parseMetar } from '../../../domain/metar';
 import { parseTaf } from '../../../domain/taf';
@@ -53,7 +54,7 @@ const renderCard = (tafRaw: string | null, timeline?: TimelineHour[]) => {
 
 describe('ForecastTimelineCard', () => {
   beforeEach(() => {
-    useSettingsStore.setState({ windUnit: 'ms' });
+    useSettingsStore.setState({ windUnit: 'ms', altUnit: 'ft' });
   });
 
   it('renders the model lane: local times, temps, rain, wind in the selected unit', () => {
@@ -91,24 +92,51 @@ describe('ForecastTimelineCard', () => {
     expect(dashes).toBeGreaterThanOrEqual(15);
   });
 
-  it('renders the TAF lane with prevailing, becoming and hatched PROB TEMPO items', () => {
+  it('renders the TAF lanes as stacked value chips with qualifiers', () => {
     renderCard(TAF_RAW);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('TAF EYVI');
     expect(txt).toContain('airport forecast');
     expect(txt).toContain('No hazards'); // benign prevailing segment
-    expect(txt).toMatch(/→ .*Gusts/); // becoming label carries the incoming hazard
-    expect(txt).toContain('30% '); // PROB percentage on the overlay
-    expect(txt).toMatch(/Thunderstorms.*at times/); // TEMPO wording
+    expect(txt).toContain('→ Changing'); // BECMG qualifier chip
+    expect(txt).toContain('Gust 14.4 m/s'); // 28 kt in the selected wind unit
+    expect(txt).toContain('30% · at times'); // PROB TEMPO qualifier chip
+    expect(txt).toContain('Thunderstorms'); // TS group → human wording
+    expect(txt).toContain('Ceiling 800 ft'); // BKN008 value, in the selected alt unit
+    expect(txt).toContain('Vis 3 km');
   });
 
-  it('shows a short band legend and the one-line source footer', () => {
+  it('switches ceiling chips with the altitude unit', () => {
+    useSettingsStore.setState({ altUnit: 'm' });
     renderCard(TAF_RAW);
     const txt = document.body.textContent ?? '';
-    expect(txt).toContain('At times / probability');
+    expect(txt).toContain('Ceiling 244 m');
+    expect(txt).not.toContain('Ceiling 800 ft');
+  });
+
+  it('switches gust chips with the wind unit', () => {
+    useSettingsStore.setState({ windUnit: 'kt' });
+    renderCard(TAF_RAW);
+    expect(document.body.textContent).toContain('Gust 28 kt');
+  });
+
+  it('shows a short human legend and the one-line source footer', () => {
+    renderCard(TAF_RAW);
+    const txt = document.body.textContent ?? '';
+    expect(txt).toContain('Forecast');
+    expect(txt).toContain('At times / possible');
     expect(txt).toContain('→ Changing');
     expect(txt).toContain('Model = point forecast at your coordinates · TAF = airport forecast');
-    expect(txt).not.toContain('Hatched ='); // old long footer gone
+  });
+
+  it('CB without a TS group reads as storm clouds with its base', () => {
+    renderCard('EYVI 280500Z 2806/2906 24008KT 9999 BKN015CB');
+    expect(document.body.textContent).toContain('Storm clouds (CB) 1500 ft');
+  });
+
+  it('TCU renders a building-clouds chip even without hazards', () => {
+    renderCard('EYVI 280500Z 2806/2906 24008KT 9999 SCT020TCU');
+    expect(document.body.textContent).toContain('Building clouds (TCU) 2000 ft');
   });
 
   it('model-only brief: model lane renders, TAF lane says there is no airport forecast', () => {
@@ -117,7 +145,34 @@ describe('ForecastTimelineCard', () => {
     expect(txt).toContain('point forecast at your coordinates');
     expect(txt).toContain('no nearby airport forecast');
     expect(txt).not.toContain('No hazards'); // no band, no legend
-    expect(txt).not.toContain('At times / probability');
+    expect(txt).not.toContain('At times / possible');
+  });
+
+  it('assignRows stacks overlapping windows and reuses rows for sequential ones', () => {
+    const w = (fromH: number, toH: number) => ({
+      from: new Date(Date.UTC(2026, 5, 28, fromH)),
+      to: new Date(Date.UTC(2026, 5, 28, toH)),
+    });
+    expect(assignRows([w(12, 16), w(15, 19)])).toEqual([0, 1]); // overlap → stacked
+    expect(assignRows([w(12, 14), w(14, 18)])).toEqual([0, 0]); // sequential → same row
+  });
+
+  it('bandChips caps at 4 chips + "+N more"', () => {
+    const item: TafBandOverlay = {
+      from: new Date(),
+      to: new Date(),
+      tempo: true,
+      hazards: ['thunderstorm', 'lowCeiling', 'lowVis', 'gusts', 'strongWind'],
+      tsGroup: true,
+      gustKt: 30,
+      ceilingFt: 500,
+      visM: 2000,
+      tcuBaseFt: 2000,
+      wxRaw: ['TSRA'],
+    };
+    const chips = bandChips(item, 'kt', 'ft');
+    expect(chips).toHaveLength(5);
+    expect(chips[4].text).toBe('+2 more');
   });
 
   it('renders nothing without timeline hours', () => {

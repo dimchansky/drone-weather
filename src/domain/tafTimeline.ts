@@ -38,6 +38,11 @@ export interface TafBandSegment {
   gustKt?: number;
   ceilingFt?: number;
   visM?: number;
+  /** A TS weather group is present (vs. a thunderstorm hazard driven by a CB layer alone). */
+  tsGroup?: boolean;
+  /** Lowest CB / TCU layer base when such a layer is present (null = present, base unknown). */
+  cbBaseFt?: number | null;
+  tcuBaseFt?: number | null;
   /** Weather group codes active in the state (e.g. ['-SHRA']). */
   wxRaw: string[];
 }
@@ -51,6 +56,9 @@ export interface TafBandOverlay {
   gustKt?: number;
   ceilingFt?: number;
   visM?: number;
+  tsGroup?: boolean;
+  cbBaseFt?: number | null;
+  tcuBaseFt?: number | null;
   wxRaw: string[];
 }
 
@@ -78,7 +86,18 @@ interface StateHazards {
   gustKt?: number;
   ceilingFt?: number;
   visM?: number;
+  tsGroup?: boolean;
+  cbBaseFt?: number | null;
+  tcuBaseFt?: number | null;
   wxRaw: string[];
+}
+
+/** Lowest reported base among layers matching `pick`; null when a layer exists but has no base. */
+function lowestBaseFt(clouds: TafState['clouds'], pick: (c: TafState['clouds'][number]) => boolean): number | null | undefined {
+  const matched = clouds.filter(pick);
+  if (matched.length === 0) return undefined;
+  const bases = matched.map((c) => c.baseFt).filter((b): b is number => b != null);
+  return bases.length > 0 ? Math.min(...bases) : null;
 }
 
 /** Same hazard bands as summarizeTaf, evaluated on a (possibly merged) prevailing state. */
@@ -86,7 +105,16 @@ function stateHazards(state: TafState): StateHazards {
   const out: StateHazards = { hazards: [], wxRaw: state.weather.map((w) => w.raw) };
   const fields = { weather: state.weather, clouds: state.clouds };
   const storm = hasThunderstorm(fields);
-  if (storm) out.hazards.push('thunderstorm');
+  if (storm) {
+    out.hazards.push('thunderstorm');
+    out.tsGroup = state.weather.some((w) => w.descriptor === 'TS');
+  }
+  // Convective layers, exposed for the UI's cloud chips (TCU alone is not a hazard kind, but it
+  // is drone-relevant — building convective cloud).
+  const cb = lowestBaseFt(state.clouds, (c) => c.cb);
+  if (cb !== undefined) out.cbBaseFt = cb;
+  const tcu = lowestBaseFt(state.clouds, (c) => c.tcu);
+  if (tcu !== undefined) out.tcuBaseFt = tcu;
   const ceil = ceilingFt(state.clouds);
   if (ceil != null && ceil < TAF_LOW_CEIL_FT) {
     out.hazards.push('lowCeiling');
@@ -135,9 +163,12 @@ function applyBecmg(state: TafState, pd: TafPeriod): TafState {
   };
 }
 
+const minBase = (a?: number | null, b?: number | null): number | null | undefined =>
+  a === undefined ? b : b === undefined ? a : a == null ? b ?? null : b == null ? a : Math.min(a, b);
+
 /** Merge two hazard evaluations conservatively (union of kinds, worst supporting values). */
 function unionHazards(a: StateHazards, b: StateHazards): StateHazards {
-  return {
+  const out: StateHazards = {
     hazards: [...new Set([...a.hazards, ...b.hazards])],
     gustKt: a.gustKt == null ? b.gustKt : b.gustKt == null ? a.gustKt : Math.max(a.gustKt, b.gustKt),
     ceilingFt:
@@ -145,6 +176,12 @@ function unionHazards(a: StateHazards, b: StateHazards): StateHazards {
     visM: a.visM == null ? b.visM : b.visM == null ? a.visM : Math.min(a.visM, b.visM),
     wxRaw: [...new Set([...a.wxRaw, ...b.wxRaw])],
   };
+  if (a.tsGroup || b.tsGroup) out.tsGroup = true;
+  const cb = minBase(a.cbBaseFt, b.cbBaseFt);
+  if (cb !== undefined) out.cbBaseFt = cb;
+  const tcu = minBase(a.tcuBaseFt, b.tcuBaseFt);
+  if (tcu !== undefined) out.tcuBaseFt = tcu;
+  return out;
 }
 
 const sameHazards = (a: TafBandSegment, b: StateHazards, kind: TafBandSegment['kind']): boolean =>
@@ -153,6 +190,9 @@ const sameHazards = (a: TafBandSegment, b: StateHazards, kind: TafBandSegment['k
   a.gustKt === b.gustKt &&
   a.ceilingFt === b.ceilingFt &&
   a.visM === b.visM &&
+  a.tsGroup === b.tsGroup &&
+  a.cbBaseFt === b.cbBaseFt &&
+  a.tcuBaseFt === b.tcuBaseFt &&
   a.wxRaw.join() === b.wxRaw.join();
 
 /**
