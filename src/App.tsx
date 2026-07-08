@@ -14,6 +14,7 @@ import { useLocationStore } from './store/locationStore';
 import { useSettingsStore } from './store/settingsStore';
 import { AppHeader } from './components/Header/AppHeader';
 import { OverviewGrid } from './components/Overview/OverviewGrid';
+import { ForecastTimelineCard } from './components/Timeline/ForecastTimelineCard';
 import { DecisionBanner } from './components/Risk/DecisionBanner';
 import { RiskFactors } from './components/Risk/RiskFactors';
 import { StatusStrip } from './components/Status/StatusStrip';
@@ -135,6 +136,9 @@ export function App() {
 
             {/* Layer 1 — the decision */}
             <DecisionBanner risk={liveRisk ?? brief.risk} wind={brief.metar.wind} secondary={secondary} />
+
+            {/* Visual forecast timeline — model lane + TAF band, source-labelled */}
+            <ForecastTimelineCard brief={brief} taf={tafParsed} now={now} />
 
             {/* Layer 2 — decision support (compact, always visible) */}
             <StatusStrip brief={brief} now={now} />

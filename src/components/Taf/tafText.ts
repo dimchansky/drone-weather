@@ -26,7 +26,8 @@ export function windowLocal(from: Date | null, to: Date | null, lt: LocationTime
   return from && to ? `${l(from)}–${l(to)}` : from ? `from ${l(from)}` : '';
 }
 
-const HAZARD_LABEL: Record<TafHazardKind, string> = {
+// Exported: the forecast timeline's TAF band uses the same human hazard names.
+export const HAZARD_LABEL: Record<TafHazardKind, string> = {
   thunderstorm: 'Thunderstorms',
   lowCeiling: 'Low cloud',
   lowVis: 'Visibility',

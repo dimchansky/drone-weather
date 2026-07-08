@@ -1,0 +1,203 @@
+/* One horizontally scrollable grid: a sticky label column + one column per hour. The TAF band
+   row spans the hour columns and positions segments/overlays by time fraction. */
+
+.scroller {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Room for the sticky labels' shadow; keeps the last column's text unclipped. */
+  padding-bottom: 2px;
+}
+
+.grid {
+  display: grid;
+  /* grid-template-columns set inline (hour count varies) */
+  align-items: center;
+  row-gap: 2px;
+  min-width: min-content;
+}
+
+/* Sticky left labels: the one structural trick in this card. Solid surface background so cells
+   sliding underneath don't show through. */
+.rowLabel {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 2px 10px 2px 0;
+  white-space: nowrap;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.timeLabel {
+  /* empty corner cell above the labels */
+}
+
+.cell {
+  text-align: center;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.time {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.timeNow {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.day {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--accent-sky);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Full-width lane headers; the text itself sticks to the left edge while the row scrolls. */
+.laneHeader {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.laneHeaderText {
+  position: sticky;
+  left: 0;
+  display: inline-block;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  opacity: 0.85;
+  background: var(--surface);
+  padding-right: 8px;
+}
+
+.zero {
+  color: var(--text-dim);
+  opacity: 0.55;
+}
+
+.rain {
+  color: var(--accent-sky);
+  font-weight: 600;
+}
+
+.gust {
+  color: var(--high);
+  font-weight: 600;
+}
+
+.windCell {
+  gap: 2px;
+}
+
+.windArrow {
+  fill: none;
+  stroke: var(--accent-sky);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- TAF band --- */
+
+.bandCell {
+  align-self: stretch;
+}
+
+.band {
+  position: relative;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+/* Segments own the TOP half for their label; overlays hatch the BOTTOM half — the two never
+   collide vertically even when they cover the same hours. */
+.segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  padding: 3px 6px 0;
+  overflow: hidden;
+  border-right: 1px solid var(--surface);
+}
+
+.segOk {
+  background: color-mix(in srgb, var(--good) 10%, var(--surface-2));
+  color: var(--text-dim);
+}
+
+.segHazard {
+  background: color-mix(in srgb, var(--caution) 22%, var(--surface-2));
+  color: color-mix(in srgb, var(--caution) 75%, var(--text));
+}
+
+/* BECMG transition window: conditions changing sometime inside — soft gradient, arrowed label. */
+.segBecoming {
+  background: repeating-linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--caution) 20%, var(--surface-2)) 0 10px,
+    color-mix(in srgb, var(--caution) 9%, var(--surface-2)) 10px 20px
+  );
+}
+
+.segLabel {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* TEMPO / PROB overlay: hatched + dashed — reads as "at times / maybe", never a solid state. */
+.overlay {
+  position: absolute;
+  top: 50%;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+  overflow: hidden;
+  border: 1.5px dashed color-mix(in srgb, var(--high) 70%, var(--border));
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--high) 26%, transparent) 0 5px,
+    transparent 5px 10px
+  );
+  color: color-mix(in srgb, var(--high) 80%, var(--text));
+}
+
+.footer {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
