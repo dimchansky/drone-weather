@@ -68,7 +68,9 @@ describe('ForecastTimelineCard', () => {
     expect(txt).toContain('Wind m/s');
     expect(txt).toContain('5.1'); // 10 kt → m/s
     expect(txt).toContain('12.9'); // gust 25 kt → m/s
-    expect(txt).toContain('Model · point forecast at your coordinates');
+    expect(txt).toContain('point forecast at your coordinates');
+    expect(txt).toContain('Rain'); // merged amount+probability row
+    expect(txt).toContain('40%'); // probability rendered inside the rain cells
   });
 
   it('respects the wind unit setting', () => {
@@ -92,19 +94,30 @@ describe('ForecastTimelineCard', () => {
   it('renders the TAF lane with prevailing, becoming and hatched PROB TEMPO items', () => {
     renderCard(TAF_RAW);
     const txt = document.body.textContent ?? '';
-    expect(txt).toContain('TAF EYVI · airport forecast');
-    expect(txt).toContain('OK'); // benign prevailing segment
+    expect(txt).toContain('TAF EYVI');
+    expect(txt).toContain('airport forecast');
+    expect(txt).toContain('No hazards'); // benign prevailing segment
     expect(txt).toMatch(/→ .*Gusts/); // becoming label carries the incoming hazard
     expect(txt).toContain('30% '); // PROB percentage on the overlay
     expect(txt).toMatch(/Thunderstorms.*at times/); // TEMPO wording
   });
 
+  it('shows a short band legend and the one-line source footer', () => {
+    renderCard(TAF_RAW);
+    const txt = document.body.textContent ?? '';
+    expect(txt).toContain('At times / probability');
+    expect(txt).toContain('→ Changing');
+    expect(txt).toContain('Model = point forecast at your coordinates · TAF = airport forecast');
+    expect(txt).not.toContain('Hatched ='); // old long footer gone
+  });
+
   it('model-only brief: model lane renders, TAF lane says there is no airport forecast', () => {
     renderCard(null);
     const txt = document.body.textContent ?? '';
-    expect(txt).toContain('Model · point forecast at your coordinates');
-    expect(txt).toContain('No TAF — no nearby airport forecast');
-    expect(txt).not.toContain('airport forecast ·');
+    expect(txt).toContain('point forecast at your coordinates');
+    expect(txt).toContain('no nearby airport forecast');
+    expect(txt).not.toContain('No hazards'); // no band, no legend
+    expect(txt).not.toContain('At times / probability');
   });
 
   it('renders nothing without timeline hours', () => {

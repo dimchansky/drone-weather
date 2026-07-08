@@ -1,5 +1,7 @@
 /* One horizontally scrollable grid: a sticky label column + one column per hour. The TAF band
-   row spans the hour columns and positions segments/overlays by time fraction. */
+   row spans the hour columns and positions segments/overlays by time fraction.
+   Readability rules: temp is the anchor row; sky-blue = water only; warning orange = meaningful
+   gusts only; the "Now" column stays tinted while scrolling. */
 
 .scroller {
   overflow-x: auto;
@@ -12,7 +14,7 @@
   display: grid;
   /* grid-template-columns set inline (hour count varies) */
   align-items: center;
-  row-gap: 2px;
+  row-gap: 3px;
   min-width: min-content;
 }
 
@@ -23,20 +25,20 @@
   left: 0;
   z-index: 2;
   background: var(--surface);
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 600;
   color: var(--text-dim);
   padding: 2px 10px 2px 0;
   white-space: nowrap;
   align-self: stretch;
   display: flex;
   align-items: center;
+  gap: 4px;
 }
 
-.timeLabel {
-  /* empty corner cell above the labels */
+.rowLabelSub {
+  font-size: 0.6rem;
+  opacity: 0.75;
 }
 
 .cell {
@@ -51,6 +53,12 @@
   gap: 1px;
   min-width: 0;
   white-space: nowrap;
+  align-self: stretch;
+}
+
+/* The present, visibly anchored even mid-scroll. */
+.nowCol {
+  background: color-mix(in srgb, var(--accent-sky) 8%, transparent);
 }
 
 .time {
@@ -62,6 +70,7 @@
 .timeNow {
   color: var(--text);
   font-weight: 700;
+  border-radius: 8px 8px 0 0;
 }
 
 .day {
@@ -72,26 +81,60 @@
   letter-spacing: 0.05em;
 }
 
+/* Temperature is the number people scan first — give it weight. */
+.tempCell {
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+/* Hairline separators splitting the model lane into weather / rain / wind groups. */
+.groupSep {
+  grid-column: 1 / -1;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  margin: 1px 0;
+}
+
 /* Full-width lane headers; the text itself sticks to the left edge while the row scrolls. */
 .laneHeader {
   grid-column: 1 / -1;
   border-top: 1px solid var(--border);
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: 5px;
+  padding-top: 6px;
 }
 
 .laneHeaderText {
   position: sticky;
   left: 0;
-  display: inline-block;
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   color: var(--text-dim);
-  opacity: 0.85;
   background: var(--surface);
   padding-right: 8px;
+}
+
+/* Source pills — the lanes' identity, loud enough to keep the sources apart at a glance. */
+.srcPill {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.srcPillModel {
+  color: var(--accent-sky);
+  border-color: color-mix(in srgb, var(--accent-sky) 35%, var(--border));
+}
+
+.srcPillTaf {
+  color: var(--text);
 }
 
 .zero {
@@ -104,6 +147,12 @@
   font-weight: 600;
 }
 
+.rainProb {
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+/* Meaningful gusts only (≥ the TAF advisory band) get the warning color. */
 .gust {
   color: var(--high);
   font-weight: 600;
@@ -113,10 +162,11 @@
   gap: 2px;
 }
 
+/* Neutral arrows: direction is orientation, not water — keeps sky-blue meaning "wet". */
 .windArrow {
   fill: none;
-  stroke: var(--accent-sky);
-  stroke-width: 2.4;
+  stroke: var(--text-dim);
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -195,9 +245,48 @@
   color: color-mix(in srgb, var(--high) 80%, var(--text));
 }
 
+/* --- legend + footer (outside the scroller: always visible, short) --- */
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legSwatch {
+  width: 16px;
+  height: 10px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.legSolid {
+  background: color-mix(in srgb, var(--caution) 22%, var(--surface-2));
+  border: 1px solid var(--border);
+}
+
+.legHatch {
+  border: 1.5px dashed color-mix(in srgb, var(--high) 70%, var(--border));
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--high) 26%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+}
+
 .footer {
-  margin: 10px 0 0;
-  font-size: 0.72rem;
+  margin: 6px 0 0;
+  font-size: 0.7rem;
   color: var(--text-dim);
   line-height: 1.4;
 }
