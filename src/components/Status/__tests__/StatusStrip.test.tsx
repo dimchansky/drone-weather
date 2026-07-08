@@ -22,14 +22,15 @@ const metarBrief = (raw: string, locationTime?: LocationTime) =>
   });
 
 describe('StatusStrip', () => {
-  it('shows station, distance, age, fetch time and QNH for a METAR brief', () => {
+  it('shows METAR age and QNH — station/distance/fetch time live in the header now', () => {
     render(<StatusStrip brief={metarBrief('EGLL 281250Z 27006KT CAVOK 20/07 Q1013')} now={NOW} />);
     const txt = document.body.textContent ?? '';
-    expect(txt).toContain('EGLL');
-    expect(txt).toContain('6 km');
     expect(txt).toMatch(/METAR \d+ min old/);
     expect(txt).toContain('QNH 1013 hPa');
     expect(txt).toMatch(/inHg/);
+    expect(txt).not.toContain('EGLL');
+    expect(txt).not.toContain('6 km');
+    expect(txt).not.toContain('fetched');
   });
 
   it('omits QNH when the METAR carries no altimeter setting', () => {
@@ -53,12 +54,9 @@ describe('StatusStrip', () => {
     expect(txt).not.toContain('QNH');
   });
 
-  it('shows the fetch time in the location timezone and names the zone', () => {
-    // fetchedAt = NOW = 13:00 UTC → America/Chicago (−5 h) = 08:00
+  it('names the location timezone', () => {
     render(<StatusStrip brief={metarBrief('EGLL 281250Z 27006KT CAVOK 20/07 Q1013', CHICAGO)} now={NOW} />);
-    const txt = document.body.textContent ?? '';
-    expect(txt).toContain('fetched 08:00');
-    expect(txt).toContain('times America/Chicago');
+    expect(document.body.textContent).toContain('times America/Chicago');
   });
 
   it('falls back to device-local time, labelled as such', () => {

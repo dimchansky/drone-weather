@@ -4,7 +4,6 @@ import { useBriefLoader } from './hooks/useBriefLoader';
 import { useNow } from './hooks/useNow';
 import { assessRisk } from './domain/risk';
 import { icingBand } from './domain/icing';
-import { precipNow } from './domain/precip';
 import { opsBandHazard } from './domain/vertical';
 import { daylight, daylightSeverity } from './domain/sun';
 import { summarizeForecast } from './domain/forecast';
@@ -18,19 +17,13 @@ import { ForecastTimelineCard } from './components/Timeline/ForecastTimelineCard
 import { DecisionBanner } from './components/Risk/DecisionBanner';
 import { RiskFactors } from './components/Risk/RiskFactors';
 import { StatusStrip } from './components/Status/StatusStrip';
-import { PrecipNowPill } from './components/Precip/PrecipNowPill';
 import { daylightBannerLine } from './components/Daylight/daylightText';
-import { ForecastStrip } from './components/Forecast/ForecastStrip';
-import { forecastBannerNote } from './components/Forecast/forecastText';
-import { TafStrip } from './components/Taf/TafStrip';
 import { TafDetailsCard } from './components/Taf/TafDetailsCard';
-import { tafBannerNote } from './components/Taf/tafText';
 import type { SecondaryLine } from './components/Risk/DecisionBanner';
 import { StationCard } from './components/Station/StationCard';
 import { VerticalAnalyzer } from './components/Vertical/VerticalAnalyzer';
 import { VerticalHazardStrip } from './components/Vertical/VerticalHazardStrip';
 import { CloudsCard } from './components/Clouds/CloudsCard';
-import { ThermoCard } from './components/Thermo/ThermoCard';
 import { RawData } from './components/Raw/RawData';
 import { ReloadPrompt } from './components/ReloadPrompt/ReloadPrompt';
 
@@ -84,18 +77,12 @@ export function App() {
   }, [brief, now]);
   const taf = useMemo(() => (tafParsed ? summarizeTaf(tafParsed, now) : null), [tafParsed, now]);
 
-  // Banner secondary lines: daylight (always) + short notes only when notable (forecast, then TAF).
+  // Banner secondary lines, trimmed since the forecast timeline sits directly below the banner:
+  // daylight only when it is an operational concern (twilight/night); model/TAF forecast notes
+  // moved into the timeline's lanes (their hazards stay visible one glance lower).
   const secondary: SecondaryLine[] = [];
-  if (dl && brief) {
-    secondary.push({ text: daylightBannerLine(dl, now, brief.locationTime), severity: daylightSeverity(dl.phase) });
-  }
-  if (fc) {
-    const note = forecastBannerNote(fc, windUnit);
-    if (note) secondary.push({ text: note, severity: fc.severity });
-  }
-  if (taf && brief) {
-    const note = tafBannerNote(taf, brief.locationTime, altUnit);
-    if (note) secondary.push({ text: note, severity: taf.severity });
+  if (dl && brief && daylightSeverity(dl.phase) === 'CAUTION') {
+    secondary.push({ text: daylightBannerLine(dl, now, brief.locationTime), severity: 'CAUTION' });
   }
 
   return (
@@ -140,13 +127,10 @@ export function App() {
             {/* Visual forecast timeline — model lane + TAF band, source-labelled */}
             <ForecastTimelineCard brief={brief} taf={tafParsed} now={now} />
 
-            {/* Layer 2 — decision support (compact, always visible) */}
+            {/* Layer 2 — decision support (compact, always visible).
+                PrecipNowPill / ForecastStrip / TafStrip / ThermoCard are retired from the page:
+                the Now tile + timeline lanes carry their facts (components stay in-tree). */}
             <StatusStrip brief={brief} now={now} />
-            <PrecipNowPill precip={precipNow(brief.metar, brief.model)} />
-            {fc && <ForecastStrip forecast={fc} windUnit={windUnit} />}
-            {taf && <TafStrip summary={taf} windUnit={windUnit} altUnit={altUnit} locationTime={brief.locationTime} />}
-            {/* Daylight and wind now live in the OverviewGrid tiles (DaylightStrip/WindCompass
-                components stay in-tree in case the tiles need to be swapped back). */}
             <RiskFactors risk={liveRisk ?? brief.risk} />
             <VerticalHazardStrip
               hazard={opsBandHazard(
@@ -160,7 +144,6 @@ export function App() {
             {/* Layer 3 — technical detail (collapsed by default) */}
             <VerticalAnalyzer brief={brief} />
             <CloudsCard brief={brief} />
-            <ThermoCard metar={brief.metar} />
             <StationCard brief={brief} now={now} />
             <TafDetailsCard
               taf={tafParsed}
