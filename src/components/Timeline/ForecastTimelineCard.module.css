@@ -243,12 +243,15 @@
 /* --- chips --- */
 
 .tChip {
-  display: block;
-  font-size: 0.64rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  line-height: 1.3;
-  padding: 0.5px 7px;
+  line-height: 1.6;
+  height: 14px;
+  padding: 0 6px;
   border-radius: 999px;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -256,6 +259,11 @@
   text-overflow: ellipsis;
   max-width: 100%;
   font-variant-numeric: tabular-nums;
+}
+
+.chipIcon {
+  flex: 0 0 auto;
+  opacity: 0.9;
 }
 
 .tHigh {
@@ -311,6 +319,12 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
+}
+
+.legendAbbr {
+  font-weight: 800;
+  color: var(--text);
 }
 
 .legSwatch {
@@ -318,11 +332,6 @@
   height: 10px;
   border-radius: 3px;
   flex: 0 0 auto;
-}
-
-.legSolid {
-  background: color-mix(in srgb, var(--caution) 22%, var(--surface-2));
-  border: 1px solid var(--border);
 }
 
 .legHatch {

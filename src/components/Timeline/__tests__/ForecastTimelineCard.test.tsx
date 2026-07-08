@@ -92,7 +92,7 @@ describe('ForecastTimelineCard', () => {
     expect(dashes).toBeGreaterThanOrEqual(15);
   });
 
-  it('renders the TAF lanes as stacked value chips with qualifiers', () => {
+  it('renders the TAF lanes as compact stacked value chips', () => {
     renderCard(TAF_RAW);
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('TAF EYVI');
@@ -100,18 +100,19 @@ describe('ForecastTimelineCard', () => {
     expect(txt).toContain('No hazards'); // benign prevailing segment
     expect(txt).toContain('→ Changing'); // BECMG qualifier chip
     expect(txt).toContain('Gust 14.4 m/s'); // 28 kt in the selected wind unit
-    expect(txt).toContain('30% · at times'); // PROB TEMPO qualifier chip
-    expect(txt).toContain('Thunderstorms'); // TS group → human wording
-    expect(txt).toContain('Ceiling 800 ft'); // BKN008 value, in the selected alt unit
+    expect(txt).toContain('30%'); // PROB percentage chip (TEMPO itself is the lane)
+    expect(txt).toContain('TS'); // thunderstorm, compact
+    expect(txt).toContain('Ceil 800 ft'); // BKN008 value, alt-unit aware, unclipped
     expect(txt).toContain('Vis 3 km');
+    expect(txt).toContain('Temporary'); // overlay lane label
   });
 
   it('switches ceiling chips with the altitude unit', () => {
     useSettingsStore.setState({ altUnit: 'm' });
     renderCard(TAF_RAW);
     const txt = document.body.textContent ?? '';
-    expect(txt).toContain('Ceiling 244 m');
-    expect(txt).not.toContain('Ceiling 800 ft');
+    expect(txt).toContain('Ceil 244 m');
+    expect(txt).not.toContain('Ceil 800 ft');
   });
 
   it('switches gust chips with the wind unit', () => {
@@ -120,23 +121,32 @@ describe('ForecastTimelineCard', () => {
     expect(document.body.textContent).toContain('Gust 28 kt');
   });
 
-  it('shows a short human legend and the one-line source footer', () => {
+  it('legend explains exactly the abbreviations on screen', () => {
     renderCard(TAF_RAW);
     const txt = document.body.textContent ?? '';
-    expect(txt).toContain('Forecast');
-    expect(txt).toContain('At times / possible');
-    expect(txt).toContain('→ Changing');
+    expect(txt).toContain('TS thunderstorm');
+    expect(txt).toContain('Ceil ceiling');
+    expect(txt).toContain('Vis visibility');
+    expect(txt).toContain('temporary / possible');
+    expect(txt).toContain('→ changing');
+    // Unused vocabulary stays out of the legend.
+    expect(txt).not.toContain('CB storm cloud');
+    expect(txt).not.toContain('TCU building cloud');
     expect(txt).toContain('Model = point forecast at your coordinates · TAF = airport forecast');
   });
 
-  it('CB without a TS group reads as storm clouds with its base', () => {
+  it('CB without a TS group reads as a compact CB chip with base + legend entry', () => {
     renderCard('EYVI 280500Z 2806/2906 24008KT 9999 BKN015CB');
-    expect(document.body.textContent).toContain('Storm clouds (CB) 1500 ft');
+    const txt = document.body.textContent ?? '';
+    expect(txt).toContain('CB 1500 ft');
+    expect(txt).toContain('CB storm cloud'); // legend explains it
   });
 
-  it('TCU renders a building-clouds chip even without hazards', () => {
+  it('TCU renders a compact chip with base even without hazards', () => {
     renderCard('EYVI 280500Z 2806/2906 24008KT 9999 SCT020TCU');
-    expect(document.body.textContent).toContain('Building clouds (TCU) 2000 ft');
+    const txt = document.body.textContent ?? '';
+    expect(txt).toContain('TCU 2000 ft');
+    expect(txt).toContain('TCU building cloud');
   });
 
   it('model-only brief: model lane renders, TAF lane says there is no airport forecast', () => {

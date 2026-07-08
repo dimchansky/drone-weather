@@ -21,6 +21,7 @@ import { ktToMs, ktToKmh, round, fmtWindSpeed, FT_TO_M, type AltUnit, type WindU
 import { useSettingsStore } from '../../store/settingsStore';
 import { fmtTimeInZone } from '../../utils/time';
 import { WeatherIcon } from '../Overview/WeatherIcon';
+import { Glyph } from '../Overview/Glyphs';
 import styles from './ForecastTimelineCard.module.css';
 
 const HOUR = 3600000;
@@ -52,9 +53,14 @@ function WindArrow({ dirDeg }: { dirDeg: number }) {
 // ---------- TAF band chips ----------
 
 export type BandChipTone = 'high' | 'caution' | 'water' | 'ok' | 'qual' | 'more';
+export type BandChipIcon = 'bolt' | 'cloud' | 'eye' | 'wind';
+/** Compact abbreviations used in the band — the legend explains exactly these. */
+export type BandAbbr = 'TS' | 'CB' | 'TCU' | 'Ceil' | 'Vis';
 export interface BandChip {
   text: string;
   tone: BandChipTone;
+  icon?: BandChipIcon;
+  abbr?: BandAbbr;
 }
 
 type BandItem = TafBandSegment | TafBandOverlay;
@@ -64,34 +70,35 @@ const fmtAltChip = (ft: number, altUnit: AltUnit): string =>
 const fmtVisChip = (m: number): string => (m >= 1000 ? `${round(m / 1000, 1)} km` : `${m} m`);
 
 /**
- * Hazard chips for one band item, most decision-relevant first, values in the selected units.
- * Human wording only — raw codes live in the tooltip. Capped at 4 + "+N" (rarely reachable:
- * a thunderstorm already suppresses the separate rain/snow chip upstream).
+ * Compact hazard chips for one band item, most decision-relevant first, values in the selected
+ * units. Short standardized labels (TS / CB / TCU / Ceil / Vis) — the dynamic legend explains
+ * exactly the abbreviations on screen; full human wording lives in the tooltip and TAF Details.
+ * Capped at 4 + "+N more".
  */
 export function bandChips(item: BandItem, windUnit: WindUnit, altUnit: AltUnit): BandChip[] {
   const chips: BandChip[] = [];
   if (item.hazards.includes('thunderstorm')) {
     if (item.tsGroup) {
-      chips.push({ text: 'Thunderstorms', tone: 'high' });
+      chips.push({ text: 'TS', tone: 'high', icon: 'bolt', abbr: 'TS' });
     } else {
       const base = item.cbBaseFt != null ? ` ${fmtAltChip(item.cbBaseFt, altUnit)}` : '';
-      chips.push({ text: `Storm clouds (CB)${base}`, tone: 'high' });
+      chips.push({ text: `CB${base}`, tone: 'high', icon: 'bolt', abbr: 'CB' });
     }
   }
   if (item.tcuBaseFt !== undefined) {
     const base = item.tcuBaseFt != null ? ` ${fmtAltChip(item.tcuBaseFt, altUnit)}` : '';
-    chips.push({ text: `Building clouds (TCU)${base}`, tone: 'caution' });
+    chips.push({ text: `TCU${base}`, tone: 'caution', icon: 'cloud', abbr: 'TCU' });
   }
   if (item.hazards.includes('lowCeiling') && item.ceilingFt != null) {
-    chips.push({ text: `Ceiling ${fmtAltChip(item.ceilingFt, altUnit)}`, tone: 'caution' });
+    chips.push({ text: `Ceil ${fmtAltChip(item.ceilingFt, altUnit)}`, tone: 'caution', icon: 'cloud', abbr: 'Ceil' });
   }
   if (item.hazards.includes('lowVis') && item.visM != null) {
-    chips.push({ text: `Vis ${fmtVisChip(item.visM)}`, tone: 'caution' });
+    chips.push({ text: `Vis ${fmtVisChip(item.visM)}`, tone: 'caution', icon: 'eye', abbr: 'Vis' });
   }
   if (item.hazards.includes('gusts') && item.gustKt != null) {
-    chips.push({ text: `Gust ${fmtWindSpeed(item.gustKt, windUnit)}`, tone: 'caution' });
+    chips.push({ text: `Gust ${fmtWindSpeed(item.gustKt, windUnit)}`, tone: 'caution', icon: 'wind' });
   }
-  if (item.hazards.includes('strongWind')) chips.push({ text: 'Strong wind', tone: 'caution' });
+  if (item.hazards.includes('strongWind')) chips.push({ text: 'Strong wind', tone: 'caution', icon: 'wind' });
   if (item.hazards.includes('snow')) chips.push({ text: 'Snow', tone: 'water' });
   else if (item.hazards.includes('rain')) chips.push({ text: 'Rain', tone: 'water' });
 
@@ -100,11 +107,31 @@ export function bandChips(item: BandItem, windUnit: WindUnit, altUnit: AltUnit):
   return chips;
 }
 
-/** Overlay qualifier — the first chip of every "at times / possible" box. */
-export function overlayQualifier(o: TafBandOverlay): string {
-  if (o.probPct != null) return o.tempo ? `${o.probPct}% · at times` : `${o.probPct}% possible`;
-  return 'At times';
+/**
+ * Overlay qualifier chip — only when there is a probability to state. Plain TEMPO needs no chip:
+ * living in the hatched "Temporary" lane already says "at times".
+ */
+export function overlayQualifier(o: TafBandOverlay): BandChip | null {
+  if (o.probPct == null) return null;
+  return { text: `${o.probPct}%`, tone: 'qual' };
 }
+
+/** Legend vocabulary — rendered only for the abbreviations actually used on screen. */
+const ABBR_LEGEND: Record<BandAbbr, string> = {
+  TS: 'thunderstorm',
+  CB: 'storm cloud',
+  TCU: 'building cloud',
+  Ceil: 'ceiling',
+  Vis: 'visibility',
+};
+const ABBR_ORDER: BandAbbr[] = ['TS', 'CB', 'TCU', 'Ceil', 'Vis'];
+const ABBR_TITLE: Record<BandAbbr, string> = {
+  TS: 'TS — thunderstorm forecast at the airport',
+  CB: 'CB — cumulonimbus (storm clouds), base height when reported',
+  TCU: 'TCU — towering cumulus (building storm clouds), base height when reported',
+  Ceil: 'Ceiling — lowest broken/overcast cloud base',
+  Vis: 'Visibility at the airport',
+};
 
 /**
  * Greedy calendar-style row assignment so time-overlapping overlays stack instead of colliding.
@@ -135,8 +162,8 @@ function bandTitle(item: BandItem): string {
   return parts.join(' · ');
 }
 
-const CHIP_H = 19; // chip height + stack gap
-const LANE_PAD = 9;
+const CHIP_H = 16; // chip height + stack gap (compact)
+const LANE_PAD = 8;
 const laneHeight = (chips: number): number => chips * CHIP_H + LANE_PAD;
 
 export function ForecastTimelineCard({
@@ -191,19 +218,29 @@ export function ForecastTimelineCard({
     return s.kind === 'becoming' ? [{ text: '→ Changing', tone: 'qual' as const }, ...chips] : chips;
   });
   const prevailH = laneHeight(Math.max(1, ...segChips.map((c) => c.length)));
-  const ovlChips = band.overlays.map((o) => [
-    { text: overlayQualifier(o), tone: 'qual' as const },
-    ...bandChips(o, windUnit, altUnit),
-  ]);
+  const ovlChips = band.overlays.map((o) => {
+    const qual = overlayQualifier(o);
+    return qual ? [qual, ...bandChips(o, windUnit, altUnit)] : bandChips(o, windUnit, altUnit);
+  });
   const ovlRows = assignRows(band.overlays);
   const ovlRowH = laneHeight(Math.max(1, ...ovlChips.map((c) => c.length)));
   const ovlLaneH = (Math.max(-1, ...ovlRows) + 1) * (ovlRowH + 4) - 4;
-  // Windows under an hour get no chip text — a tinted block with a tooltip beats clipped type.
-  const textless = (from: Date, to: Date): boolean => to.getTime() - from.getTime() < HOUR;
+  // Windows whose VISIBLE portion is under an hour get no chip text — a tinted block with a
+  // tooltip beats clipped type. Clamped to the axis: a window running past the horizon edge is
+  // judged by what's actually on screen, not its raw duration.
+  const textless = (from: Date, to: Date): boolean =>
+    Math.min(to.getTime(), axisEnd) - Math.max(from.getTime(), axisStart) < HOUR;
+
+  // The legend explains exactly the abbreviations on screen — nothing more.
+  const usedAbbrs = ABBR_ORDER.filter((a) =>
+    [...segChips, ...ovlChips].some((chips) => chips.some((c) => c.abbr === a)),
+  );
+  const hasBecoming = band.segments.some((s) => s.kind === 'becoming');
 
   const chipEls = (chips: BandChip[]) =>
     chips.map((c, i) => (
       <span key={`${i}${c.text}`} className={`${styles.tChip} ${styles[TONE_CLASS[c.tone]]}`}>
+        {c.icon && <Glyph kind={c.icon} size={11} className={styles.chipIcon} />}
         {c.text}
       </span>
     ));
@@ -329,11 +366,11 @@ export function ForecastTimelineCard({
                 </div>
               </div>
 
-              {/* "at times / possible" lane — TEMPO/PROB only, spatially separate */}
+              {/* Temporary/probable lane — TEMPO/PROB only, spatially separate */}
               {band.overlays.length > 0 && (
                 <>
-                  <div className={styles.rowLabel}>
-                    <span className={styles.rowLabelSub}>at times</span>
+                  <div className={styles.rowLabel} title="TEMPO / PROB — temporary or probabilistic conditions, not continuous">
+                    <span className={styles.rowLabelSub}>Temporary</span>
                   </div>
                   <div className={styles.bandCell} style={bandSpan}>
                     <div className={styles.ovlLane} style={{ height: ovlLaneH }}>
@@ -370,14 +407,18 @@ export function ForecastTimelineCard({
       </div>
 
       {band.available && (
-        <div className={styles.legend} aria-hidden="true">
-          <span className={styles.legendItem}>
-            <span className={`${styles.legSwatch} ${styles.legSolid}`} /> Forecast
-          </span>
-          <span className={styles.legendItem}>
-            <span className={`${styles.legSwatch} ${styles.legHatch}`} /> At times / possible
-          </span>
-          <span className={styles.legendItem}>→ Changing</span>
+        <div className={styles.legend}>
+          {usedAbbrs.map((a) => (
+            <span key={a} className={styles.legendItem} title={ABBR_TITLE[a]}>
+              <strong className={styles.legendAbbr}>{a}</strong> {ABBR_LEGEND[a]}
+            </span>
+          ))}
+          {band.overlays.length > 0 && (
+            <span className={styles.legendItem}>
+              <span className={`${styles.legSwatch} ${styles.legHatch}`} /> temporary / possible
+            </span>
+          )}
+          {hasBecoming && <span className={styles.legendItem}>→ changing</span>}
         </div>
       )}
       <p className={styles.footer}>
