@@ -7,6 +7,7 @@ import {
   getSurfaceFallback,
   getModelConditions,
   getForecastWindow,
+  getTimelineHours,
   getLocationTime,
   type SurfaceFallback,
 } from '../data/openMeteo';
@@ -77,11 +78,12 @@ export const useBriefStore = create<BriefState>((set, get) => ({
         // Prefer the user's pinned station if it's still in range; else nearest.
         const chosen =
           (opts.selectedIcao && nearby.find((n) => n.metar.icao === opts.selectedIcao)) || nearby[0];
-        const [taf, modelLevels, model, forecast, locationTime] = await Promise.all([
+        const [taf, modelLevels, model, forecast, timeline, locationTime] = await Promise.all([
           getTaf(chosen.metar.icao, { force }).catch(() => null),
           getProfile(coord, { force }).catch(() => []),
           getModelConditions(coord, { force }).catch(() => null),
           getForecastWindow(coord, { force }).catch(() => []),
+          getTimelineHours(coord, { force }).catch(() => []),
           getLocationTime(coord, { force }).catch(() => undefined),
         ]);
         const station: StationRef = {
@@ -99,6 +101,7 @@ export const useBriefStore = create<BriefState>((set, get) => ({
           modelLevels,
           model,
           forecast,
+          timeline,
           locationTime,
           station,
           opsCeilingM: opts.opsCeilingM,
@@ -109,11 +112,12 @@ export const useBriefStore = create<BriefState>((set, get) => ({
       }
 
       // No nearby METAR station — fall back to a model-only brief.
-      const [surface, modelLevels, model, forecast, locationTime] = await Promise.all([
+      const [surface, modelLevels, model, forecast, timeline, locationTime] = await Promise.all([
         getSurfaceFallback(coord, { force }),
         getProfile(coord, { force }).catch(() => []),
         getModelConditions(coord, { force }).catch(() => null),
         getForecastWindow(coord, { force }).catch(() => []),
+        getTimelineHours(coord, { force }).catch(() => []),
         getLocationTime(coord, { force }).catch(() => undefined),
       ]);
       const brief = assembleBrief({
@@ -124,6 +128,7 @@ export const useBriefStore = create<BriefState>((set, get) => ({
         modelLevels,
         model,
         forecast,
+        timeline,
         locationTime,
         station: null,
         distanceKm: null,

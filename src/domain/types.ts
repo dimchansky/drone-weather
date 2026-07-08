@@ -108,6 +108,25 @@ export interface ForecastHour {
   precipProb: number | null; // %
 }
 
+/**
+ * One hour of the visual forecast timeline — the richer per-hour surface fields the Open-Meteo
+ * request already carries (the same cached payload as ForecastHour, just not discarded).
+ * Point forecast at the selected coordinates; never presented as an observation.
+ */
+export interface TimelineHour {
+  time: Date;
+  tempC: number | null;
+  dewpC: number | null;
+  rhPct: number | null;
+  windDirDeg: number | null;
+  windKt: number | null;
+  gustKt: number | null;
+  precipMm: number | null;
+  precipProb: number | null; // %
+  cloudCoverPct: number | null;
+  cloudCoverLowPct: number | null;
+}
+
 /** Surface-level model (Open-Meteo) conditions used for moisture/wetness risk. */
 export interface ModelConditions {
   tempC2m: number | null;

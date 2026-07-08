@@ -5,6 +5,7 @@ import {
   getSurfaceFallback,
   parseModelConditions,
   parseForecastWindow,
+  parseTimelineHours,
   getLocationTime,
 } from '../openMeteo';
 import fixture from './fixtures/openmeteo-profile.json';
@@ -114,6 +115,57 @@ describe('parseForecastWindow', () => {
 
   it('is empty for an undefined response', () => {
     expect(parseForecastWindow(undefined, NOON)).toEqual([]);
+  });
+});
+
+describe('parseTimelineHours', () => {
+  const hours = ['11:00', '12:00', '13:00', '14:00', '15:00'].map((h) => `2026-06-28T${h}`);
+  const data = {
+    hourly: {
+      time: hours,
+      temperature_2m: [14, 15, 16, 16, 15],
+      dew_point_2m: [12, 13, 13, 14, 14],
+      relative_humidity_2m: [88, 88, 82, 88, 94],
+      wind_speed_10m: [7, 8, 12, 16, 18],
+      wind_direction_10m: [240, 240, 250, 270, 270],
+      wind_gusts_10m: [12, 14, 20, 26, 30],
+      precipitation: [0, 0, 0, 0.3, 0.6],
+      // No precipitation_probability series — every hour must carry null, not 0.
+      cloud_cover: [10, 20, 60, 90, 100],
+      cloud_cover_low: [5, 10, 40, 80, 90],
+    },
+  };
+
+  it('keeps the full per-hour surface fields from the same payload', () => {
+    const tl = parseTimelineHours(data, NOON); // nearest = 12:00 (index 1)
+    expect(tl).toHaveLength(4); // only 4 hours remain in the fixture
+    expect(tl[0]).toMatchObject({
+      tempC: 15,
+      dewpC: 13,
+      rhPct: 88,
+      windDirDeg: 240,
+      windKt: 8,
+      gustKt: 14,
+      precipMm: 0,
+      cloudCoverPct: 20,
+      cloudCoverLowPct: 10,
+    });
+    expect(tl[0].time.toISOString()).toBe('2026-06-28T12:00:00.000Z');
+    expect(tl[3].precipMm).toBe(0.6);
+  });
+
+  it('missing probability series → null cells (never fabricated)', () => {
+    const tl = parseTimelineHours(data, NOON);
+    expect(tl.every((h) => h.precipProb === null)).toBe(true);
+  });
+
+  it('caps at the requested horizon', () => {
+    const tl = parseTimelineHours(data, NOON, 2);
+    expect(tl).toHaveLength(2);
+  });
+
+  it('is empty for an undefined response', () => {
+    expect(parseTimelineHours(undefined, NOON)).toEqual([]);
   });
 });
 

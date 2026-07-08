@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { currentConditions } from '../currentConditions';
+import { currentConditions, modelConditionIcon } from '../currentConditions';
 import { parseMetar } from '../metar';
 import type { ModelConditions } from '../types';
 
@@ -217,6 +217,27 @@ describe('currentConditions — model fallback', () => {
       currentConditions(synthetic, model({}), 'night', 'model'),
     ];
     for (const c of all) expect(c.source).not.toBe('metar');
+  });
+});
+
+describe('modelConditionIcon — per-hour timeline icon', () => {
+  it('uses the same precip thresholds as the model branch', () => {
+    expect(modelConditionIcon(0.5, null, 10, false)).toBe('rain');
+    expect(modelConditionIcon(null, 70, 10, false)).toBe('rain');
+    expect(modelConditionIcon(0, 30, 10, false)).toBe('sun');
+  });
+
+  it('cloud tiers with day/night variants', () => {
+    expect(modelConditionIcon(0, 0, 95, false)).toBe('cloud');
+    expect(modelConditionIcon(0, 0, 60, true)).toBe('cloud');
+    expect(modelConditionIcon(0, 0, 30, false)).toBe('cloud-sun');
+    expect(modelConditionIcon(0, 0, 30, true)).toBe('cloud-moon');
+    expect(modelConditionIcon(0, 0, 5, true)).toBe('moon');
+  });
+
+  it('null everything → clear day/night (no fabricated weather)', () => {
+    expect(modelConditionIcon(null, null, null, false)).toBe('sun');
+    expect(modelConditionIcon(null, null, null, true)).toBe('moon');
   });
 });
 

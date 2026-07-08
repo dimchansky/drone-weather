@@ -2,7 +2,7 @@
 // profile from pressure-level data, plus a surface fallback when no METAR is nearby.
 // See docs/spec.md §6.3.
 
-import type { Coord, ForecastHour, LocationTime, ModelConditions, ProfileLevel } from '../domain/types';
+import type { Coord, ForecastHour, LocationTime, ModelConditions, ProfileLevel, TimelineHour } from '../domain/types';
 import { dewPointFromRH } from '../domain/humidity';
 import { cachedFetchJson } from './cache';
 
@@ -254,6 +254,50 @@ export async function getForecastWindow(
   const now = deps.now ?? new Date();
   const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
   return parseForecastWindow(data, now);
+}
+
+/**
+ * Visual-timeline hours: the nearest hour to `now` (inclusive) through `hours - 1` ahead, with
+ * the full per-hour surface fields the request already carries (temp/dew/RH, wind dir/speed/gust,
+ * precip amount/probability, cloud cover). Same cached payload — no extra network call.
+ */
+export function parseTimelineHours(
+  data: OpenMeteoResponse | undefined,
+  now: Date,
+  hours = 12,
+): TimelineHour[] {
+  const times = timesOf(data);
+  if (!times || !data?.hourly) return [];
+  const i0 = nearestHourIndex(times, now);
+  const out: TimelineHour[] = [];
+  for (let i = i0; i < times.length && i < i0 + hours; i++) {
+    const val = reader(data.hourly, i);
+    out.push({
+      time: new Date(`${times[i]}Z`),
+      tempC: val('temperature_2m'),
+      dewpC: val('dew_point_2m'),
+      rhPct: val('relative_humidity_2m'),
+      windDirDeg: val('wind_direction_10m'),
+      windKt: val('wind_speed_10m'),
+      gustKt: val('wind_gusts_10m'),
+      precipMm: val('precipitation'),
+      precipProb: val('precipitation_probability'),
+      cloudCoverPct: val('cloud_cover'),
+      cloudCoverLowPct: val('cloud_cover_low'),
+    });
+  }
+  return out;
+}
+
+/** Fetch the visual-timeline hours (reuses the same cached request as getProfile). */
+export async function getTimelineHours(
+  coord: Coord,
+  deps: OpenMeteoDeps = {},
+): Promise<TimelineHour[]> {
+  const fj = fetcher(deps);
+  const now = deps.now ?? new Date();
+  const data = (await fj(buildUrl(coord))) as OpenMeteoResponse | undefined;
+  return parseTimelineHours(data, now);
 }
 
 /** Device-local offset as a LocationTime fallback (used when the model timezone is unavailable). */

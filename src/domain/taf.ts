@@ -288,11 +288,18 @@ export interface TafSummary {
 }
 
 const HORIZON_H = 6;
-const GUST_KT = 22;
-const GUST_SPREAD_KT = 8;
-const STRONG_WIND_KT = 22;
-const LOW_CEIL_FT = 1000;
-const LOW_VIS_M = 5000;
+// Hazard thresholds — exported so the visual TAF timeline (tafTimeline.ts) colors segments with
+// the exact same bands as this summary; a single source of truth.
+export const TAF_GUST_KT = 22;
+export const TAF_GUST_SPREAD_KT = 8;
+export const TAF_STRONG_WIND_KT = 22;
+export const TAF_LOW_CEIL_FT = 1000;
+export const TAF_LOW_VIS_M = 5000;
+const GUST_KT = TAF_GUST_KT;
+const GUST_SPREAD_KT = TAF_GUST_SPREAD_KT;
+const STRONG_WIND_KT = TAF_STRONG_WIND_KT;
+const LOW_CEIL_FT = TAF_LOW_CEIL_FT;
+const LOW_VIS_M = TAF_LOW_VIS_M;
 
 /** Display/priority order — most decision-relevant first. */
 const HAZARD_ORDER: TafHazardKind[] = ['thunderstorm', 'lowCeiling', 'lowVis', 'gusts', 'strongWind', 'rain', 'snow'];

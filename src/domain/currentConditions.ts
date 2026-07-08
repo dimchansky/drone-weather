@@ -75,6 +75,33 @@ const clear = (isNight: boolean, source: CurrentConditions['source']): CurrentCo
   source,
 });
 
+// Model thresholds — shared with the per-hour timeline icon so a forecast hour and the "Now"
+// tile can never disagree about the same numbers. Precip mirrors precipNow (precip.ts).
+const MODEL_RAIN_MM = 0.1;
+const MODEL_RAIN_PROB = 60;
+const CLOUD_OVERCAST = 85;
+const CLOUD_MOSTLY = 50;
+const CLOUD_PARTLY = 20;
+
+/**
+ * Icon for one model forecast hour (visual timeline) — same tiers as the model branches of
+ * currentConditions. Model-sourced by construction; the timeline lane label carries the sourcing.
+ */
+export function modelConditionIcon(
+  precipMm: number | null,
+  precipProb: number | null,
+  cloudCoverPct: number | null,
+  isNight: boolean,
+): ConditionIcon {
+  if (precipMm != null && precipMm >= MODEL_RAIN_MM) return 'rain';
+  if (precipProb != null && precipProb >= MODEL_RAIN_PROB) return 'rain';
+  if (cloudCoverPct != null) {
+    if (cloudCoverPct >= CLOUD_MOSTLY) return 'cloud';
+    if (cloudCoverPct >= CLOUD_PARTLY) return isNight ? 'cloud-moon' : 'cloud-sun';
+  }
+  return isNight ? 'moon' : 'sun';
+}
+
 /**
  * Map current observations to one icon + label. `briefSource` gates the METAR branches: a
  * model-only brief synthesizes a Metar, and that must never be presented as an observation.
@@ -129,10 +156,10 @@ export function currentConditions(
   }
 
   // 2. Model precipitation — hedged wording, never observed-style.
-  if (model?.precipMm != null && model.precipMm >= 0.1) {
+  if (model?.precipMm != null && model.precipMm >= MODEL_RAIN_MM) {
     return { icon: 'rain', label: 'Rain likely', source: 'model' };
   }
-  if (model?.precipProb != null && model.precipProb >= 60) {
+  if (model?.precipProb != null && model.precipProb >= MODEL_RAIN_PROB) {
     return { icon: 'rain', label: 'Rain possible', source: 'model' };
   }
 
@@ -145,7 +172,7 @@ export function currentConditions(
   }
   if (model?.cloudCoverPct != null) {
     const pct = model.cloudCoverPct;
-    const rank = pct >= 85 ? 4 : pct >= 50 ? 3 : pct >= 20 ? 2 : 0;
+    const rank = pct >= CLOUD_OVERCAST ? 4 : pct >= CLOUD_MOSTLY ? 3 : pct >= CLOUD_PARTLY ? 2 : 0;
     const sky = skyLabel(rank, isNight);
     return sky ? { ...sky, source: 'model' } : clear(isNight, 'model');
   }

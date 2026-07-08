@@ -1,7 +1,7 @@
 // Brief assembler — pure composition of the domain pieces into the object the UI renders.
 // The async fetching lives in the store; this stays pure and testable. See docs/spec.md §7.
 
-import type { Coord, ForecastHour, LocationTime, Metar, ModelConditions, ProfileLevel, RiskSummary, Taf, VerticalProfile } from './types';
+import type { Coord, ForecastHour, LocationTime, Metar, ModelConditions, ProfileLevel, RiskSummary, Taf, TimelineHour, VerticalProfile } from './types';
 import { mergeModelProfile, lapseProfile } from './profile';
 import { icingBand, type IcingBand } from './icing';
 import { resolveCloudBase, type ResolvedCloudBase } from './clouds';
@@ -27,6 +27,7 @@ export interface Brief {
   risk: RiskSummary;
   model: ModelConditions | null; // kept so risk can be recomputed live (freshness + dew)
   forecast: ForecastHour[]; // short-term model look-ahead window (summarized live in the UI)
+  timeline: TimelineHour[]; // richer per-hour model fields for the visual forecast timeline
   locationTime: LocationTime; // flight-site timezone for local-time display (daylight/TAF)
   opsCeilingM: number; // kept so the risk can be recomputed live (freshness)
   fetchedAt: Date;
@@ -40,6 +41,7 @@ export interface AssembleInput {
   modelLevels: ProfileLevel[];
   model?: ModelConditions | null;
   forecast?: ForecastHour[];
+  timeline?: TimelineHour[];
   locationTime?: LocationTime;
   station?: StationRef | null;
   distanceKm?: number | null;
@@ -85,6 +87,7 @@ export function assembleBrief(input: AssembleInput): Brief {
     risk,
     model,
     forecast: input.forecast ?? [],
+    timeline: input.timeline ?? [],
     locationTime: input.locationTime ?? {
       utcOffsetSeconds: -now.getTimezoneOffset() * 60,
       timezone: null,
