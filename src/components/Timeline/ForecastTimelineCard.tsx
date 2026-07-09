@@ -10,6 +10,7 @@
 // (capped at 4 chips + "+N"). Missing values render as "—", never zero. Times are flight-site
 // local. Color discipline: sky-blue = water, warning orange = meaningful gusts only.
 
+import { useState } from 'react';
 import { Card } from '../common/Card';
 import type { Brief } from '../../domain/brief';
 import type { ParsedTaf } from '../../domain/taf';
@@ -53,7 +54,7 @@ function WindArrow({ dirDeg }: { dirDeg: number }) {
 // ---------- TAF band chips ----------
 
 export type BandChipTone = 'high' | 'caution' | 'water' | 'ok' | 'qual' | 'more';
-export type BandChipIcon = 'bolt' | 'cloud' | 'eye' | 'wind';
+export type BandChipIcon = 'bolt' | 'cloud' | 'eye' | 'wind' | 'rain';
 /** Compact abbreviations used in the band — the legend explains exactly these. */
 export type BandAbbr = 'TS' | 'CB' | 'TCU' | 'Ceil' | 'Vis';
 export interface BandChip {
@@ -99,12 +100,40 @@ export function bandChips(item: BandItem, windUnit: WindUnit, altUnit: AltUnit):
     chips.push({ text: `Gust ${fmtWindSpeed(item.gustKt, windUnit)}`, tone: 'caution', icon: 'wind' });
   }
   if (item.hazards.includes('strongWind')) chips.push({ text: 'Strong wind', tone: 'caution', icon: 'wind' });
-  if (item.hazards.includes('snow')) chips.push({ text: 'Snow', tone: 'water' });
-  else if (item.hazards.includes('rain')) chips.push({ text: 'Rain', tone: 'water' });
+  if (item.hazards.includes('snow')) chips.push({ text: 'Snow', tone: 'water', icon: 'rain' });
+  else if (item.hazards.includes('rain')) chips.push({ text: 'Rain', tone: 'water', icon: 'rain' });
 
   if (chips.length === 0) return [{ text: 'No hazards', tone: 'ok' }];
   if (chips.length > 4) return [...chips.slice(0, 4), { text: `+${chips.length - 4} more`, tone: 'more' }];
   return chips;
+}
+
+/** Full human wording for the tap-to-inspect detail strip (and tooltips). */
+export function bandDetail(item: BandItem, windUnit: WindUnit, altUnit: AltUnit): string {
+  const parts: string[] = [];
+  if (item.hazards.includes('thunderstorm')) {
+    parts.push(
+      item.tsGroup
+        ? 'Thunderstorms'
+        : `Storm clouds (CB)${item.cbBaseFt != null ? ` at ${fmtAltChip(item.cbBaseFt, altUnit)}` : ''}`,
+    );
+  }
+  if (item.tcuBaseFt !== undefined) {
+    parts.push(`Building clouds (TCU)${item.tcuBaseFt != null ? ` at ${fmtAltChip(item.tcuBaseFt, altUnit)}` : ''}`);
+  }
+  if (item.hazards.includes('lowCeiling') && item.ceilingFt != null) {
+    parts.push(`Ceiling ${fmtAltChip(item.ceilingFt, altUnit)}`);
+  }
+  if (item.hazards.includes('lowVis') && item.visM != null) parts.push(`Visibility ${fmtVisChip(item.visM)}`);
+  if (item.hazards.includes('gusts') && item.gustKt != null) {
+    parts.push(`Gusts ${fmtWindSpeed(item.gustKt, windUnit)}`);
+  }
+  if (item.hazards.includes('strongWind')) parts.push('Strong wind');
+  if (item.hazards.includes('snow')) parts.push('Snow');
+  else if (item.hazards.includes('rain')) parts.push('Rain');
+  if (parts.length === 0) parts.push('No significant hazards');
+  const raw = item.wxRaw.length ? ` (${item.wxRaw.join(' ')})` : '';
+  return parts.join(' · ') + raw;
 }
 
 /**
@@ -150,21 +179,21 @@ export function assignRows(items: { from: Date; to: Date }[]): number[] {
   });
 }
 
-function bandTitle(item: BandItem): string {
-  const parts: string[] = [];
-  if (item.hazards.length === 0) parts.push('no significant hazards');
-  if (item.gustKt != null) parts.push(`gusts ${item.gustKt} kt`);
-  if (item.ceilingFt != null) parts.push(`ceiling ${item.ceilingFt} ft`);
-  if (item.visM != null) parts.push(`visibility ${item.visM} m`);
-  if (item.cbBaseFt !== undefined) parts.push(`CB${item.cbBaseFt != null ? ` base ${item.cbBaseFt} ft` : ''}`);
-  if (item.tcuBaseFt !== undefined) parts.push(`TCU${item.tcuBaseFt != null ? ` base ${item.tcuBaseFt} ft` : ''}`);
-  if (item.wxRaw.length) parts.push(item.wxRaw.join(' '));
-  return parts.join(' · ');
-}
-
 const CHIP_H = 16; // chip height + stack gap (compact)
 const LANE_PAD = 8;
 const laneHeight = (chips: number): number => chips * CHIP_H + LANE_PAD;
+
+// Density tiers, from the window's VISIBLE span at the minimum column width (46px/h): enough
+// room → full chip stack; medium → one icon + count indicator; sliver → tinted block only.
+// Conservative by design — showing a count where full chips might have fit beats clipped values.
+const COL_MIN_PX = 46;
+const FULL_MIN_PX = 104;
+const NONE_MAX_PX = 40;
+export type BandDensity = 'full' | 'compact' | 'none';
+export function bandDensity(visibleMs: number): BandDensity {
+  const px = (visibleMs / HOUR) * COL_MIN_PX;
+  return px < NONE_MAX_PX ? 'none' : px < FULL_MIN_PX ? 'compact' : 'full';
+}
 
 export function ForecastTimelineCard({
   brief,
@@ -177,6 +206,9 @@ export function ForecastTimelineCard({
 }) {
   const windUnit = useSettingsStore((s) => s.windUnit);
   const altUnit = useSettingsStore((s) => s.altUnit);
+  // Tap-to-inspect: id of the selected band item; its full wording renders under the band
+  // (a floating popover would be clipped by the horizontal scroller).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const hours = brief.timeline;
   if (hours.length === 0) return null;
 
@@ -225,11 +257,10 @@ export function ForecastTimelineCard({
   const ovlRows = assignRows(band.overlays);
   const ovlRowH = laneHeight(Math.max(1, ...ovlChips.map((c) => c.length)));
   const ovlLaneH = (Math.max(-1, ...ovlRows) + 1) * (ovlRowH + 4) - 4;
-  // Windows whose VISIBLE portion is under an hour get no chip text — a tinted block with a
-  // tooltip beats clipped type. Clamped to the axis: a window running past the horizon edge is
-  // judged by what's actually on screen, not its raw duration.
-  const textless = (from: Date, to: Date): boolean =>
-    Math.min(to.getTime(), axisEnd) - Math.max(from.getTime(), axisStart) < HOUR;
+  // Density from the VISIBLE (axis-clamped) span — a window running past the horizon edge is
+  // judged by what's actually on screen, never its raw duration.
+  const density = (from: Date, to: Date): BandDensity =>
+    bandDensity(Math.min(to.getTime(), axisEnd) - Math.max(from.getTime(), axisStart));
 
   // The legend explains exactly the abbreviations on screen — nothing more.
   const usedAbbrs = ABBR_ORDER.filter((a) =>
@@ -244,6 +275,48 @@ export function ForecastTimelineCard({
         {c.text}
       </span>
     ));
+
+  // Medium-narrow windows: one indicator chip — the highest-priority hazard's icon + a count.
+  // Never partial text. Benign windows need no indicator; the tint says it.
+  const compactEl = (chips: BandChip[]) => {
+    const informative = chips.filter((c) => c.tone !== 'qual' && c.tone !== 'ok' && c.tone !== 'more');
+    if (informative.length === 0) return null;
+    const top = informative[0];
+    return (
+      <span className={`${styles.tChip} ${styles[TONE_CLASS[top.tone]]} ${styles.tChipMini}`}>
+        {top.icon && <Glyph kind={top.icon} size={11} className={styles.chipIcon} />}
+        {informative.length > 1 ? `+${informative.length}` : ''}
+      </span>
+    );
+  };
+
+  const itemContent = (from: Date, to: Date, chips: BandChip[]) => {
+    const d = density(from, to);
+    return d === 'full' ? chipEls(chips) : d === 'compact' ? compactEl(chips) : null;
+  };
+
+  // Detail strip content for the selected item. Ids are index-based: an in-progress window's
+  // times move with the 30 s clock tick, so time-based ids would silently drop the selection.
+  const segId = (i: number) => `s${i}`;
+  const ovlId = (i: number) => `o${i}`;
+  const toggle = (id: string) => setSelectedId((cur) => (cur === id ? null : id));
+  let detail: { header: string; body: string } | null = null;
+  if (selectedId) {
+    const idx = Number(selectedId.slice(1));
+    if (selectedId[0] === 's' && band.segments[idx]) {
+      const s = band.segments[idx];
+      detail = {
+        header: `${timeSpan(s.from, s.to)} · ${s.kind === 'becoming' ? 'Changing (BECMG)' : 'Forecast'}`,
+        body: bandDetail(s, windUnit, altUnit),
+      };
+    } else if (selectedId[0] === 'o' && band.overlays[idx]) {
+      const o = band.overlays[idx];
+      detail = {
+        header: `${timeSpan(o.from, o.to)} · Temporary${o.probPct != null ? ` (${o.probPct}% probability)` : ''}`,
+        body: bandDetail(o, windUnit, altUnit),
+      };
+    }
+  }
 
   return (
     <Card title="Next 12 hours">
@@ -352,16 +425,21 @@ export function ForecastTimelineCard({
               <div className={styles.bandCell} style={bandSpan}>
                 <div className={styles.chipLane} style={{ height: prevailH }}>
                   {band.segments.map((s, si) => (
-                    <div
-                      key={`s${s.from.toISOString()}`}
-                      className={`${styles.segment} ${
+                    <button
+                      type="button"
+                      key={segId(si)}
+                      className={`${styles.selectable} ${styles.segment} ${
                         s.hazards.length === 0 ? styles.segOk : styles.segHazard
-                      } ${s.kind === 'becoming' ? styles.segBecoming : ''}`}
+                      } ${s.kind === 'becoming' ? styles.segBecoming : ''} ${
+                        selectedId === segId(si) ? styles.selected : ''
+                      }`}
                       style={spanStyle(s.from, s.to)}
-                      title={`${timeSpan(s.from, s.to)}${s.kind === 'becoming' ? ' (changing)' : ''}: ${bandTitle(s)}`}
+                      title={`${timeSpan(s.from, s.to)}${s.kind === 'becoming' ? ' (changing)' : ''}: ${bandDetail(s, windUnit, altUnit)}`}
+                      aria-pressed={selectedId === segId(si)}
+                      onClick={() => toggle(segId(si))}
                     >
-                      {!textless(s.from, s.to) && chipEls(segChips[si])}
-                    </div>
+                      {itemContent(s.from, s.to, segChips[si])}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -375,9 +453,12 @@ export function ForecastTimelineCard({
                   <div className={styles.bandCell} style={bandSpan}>
                     <div className={styles.ovlLane} style={{ height: ovlLaneH }}>
                       {band.overlays.map((o, oi) => (
-                        <div
-                          key={`o${oi}-${o.from.toISOString()}`}
-                          className={styles.ovlBox}
+                        <button
+                          type="button"
+                          key={ovlId(oi)}
+                          className={`${styles.selectable} ${styles.ovlBox} ${
+                            selectedId === ovlId(oi) ? styles.selected : ''
+                          }`}
                           style={{
                             ...spanStyle(o.from, o.to),
                             top: ovlRows[oi] * (ovlRowH + 4),
@@ -385,10 +466,12 @@ export function ForecastTimelineCard({
                           }}
                           title={`${timeSpan(o.from, o.to)}: ${
                             o.probPct ? `${o.probPct}% probability ` : ''
-                          }${o.tempo ? 'at times ' : ''}· ${bandTitle(o)}`}
+                          }${o.tempo ? 'at times ' : ''}· ${bandDetail(o, windUnit, altUnit)}`}
+                          aria-pressed={selectedId === ovlId(oi)}
+                          onClick={() => toggle(ovlId(oi))}
                         >
-                          {!textless(o.from, o.to) && chipEls(ovlChips[oi])}
-                        </div>
+                          {itemContent(o.from, o.to, ovlChips[oi])}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -406,6 +489,11 @@ export function ForecastTimelineCard({
         </div>
       </div>
 
+      {detail && (
+        <p className={styles.bandDetail}>
+          <strong>{detail.header}</strong> — {detail.body}
+        </p>
+      )}
       {band.available && (
         <div className={styles.legend}>
           {usedAbbrs.map((a) => (

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import { ForecastTimelineCard, assignRows, bandChips } from '../ForecastTimelineCard';
 import type { TafBandOverlay } from '../../../domain/tafTimeline';
 import { assembleBrief, type StationRef } from '../../../domain/brief';
@@ -97,14 +97,42 @@ describe('ForecastTimelineCard', () => {
     const txt = document.body.textContent ?? '';
     expect(txt).toContain('TAF EYVI');
     expect(txt).toContain('airport forecast');
-    expect(txt).toContain('No hazards'); // benign prevailing segment
-    expect(txt).toContain('→ Changing'); // BECMG qualifier chip
+    // The 2 h BECMG window is too narrow for full chips → indicator only; the legend still
+    // explains the changing stripes, and the wide post-BECMG segment carries the gust value.
+    expect(txt).toContain('→ changing');
     expect(txt).toContain('Gust 14.4 m/s'); // 28 kt in the selected wind unit
     expect(txt).toContain('30%'); // PROB percentage chip (TEMPO itself is the lane)
     expect(txt).toContain('TS'); // thunderstorm, compact
     expect(txt).toContain('Ceil 800 ft'); // BKN008 value, alt-unit aware, unclipped
     expect(txt).toContain('Vis 3 km');
     expect(txt).toContain('Temporary'); // overlay lane label
+  });
+
+  it('a wide benign TAF shows a single No hazards chip', () => {
+    renderCard('EYVI 280500Z 2806/2906 24008KT CAVOK');
+    expect(document.body.textContent).toContain('No hazards');
+  });
+
+  it('narrow windows render an icon+count indicator instead of clipped chip text', () => {
+    // TEMPO 12–14Z: visible ≈ 1.9 h at NOW 12:10 → compact tier. Three hazards inside.
+    renderCard('EYVI 280500Z 2806/2906 24008KT CAVOK TEMPO 2812/2814 4000 -RA BKN008');
+    const txt = document.body.textContent ?? '';
+    expect(txt).toContain('+3'); // Ceil + Vis + Rain collapse to one indicator
+    expect(txt).not.toContain('Ceil 800 ft'); // no value text in the narrow box
+    expect(txt).not.toContain('Vis 4 km');
+  });
+
+  it('tapping a band window shows its full wording in the detail strip; tapping again hides it', () => {
+    const { container } = renderCard('EYVI 280500Z 2806/2906 24008KT CAVOK TEMPO 2812/2814 4000 -RA BKN008');
+    const box = container.querySelector('[class*=ovlBox]') as HTMLElement;
+    fireEvent.click(box);
+    const txt = () => document.body.textContent ?? '';
+    expect(txt()).toContain('Temporary');
+    expect(txt()).toContain('Ceiling 800 ft'); // full wording, unclipped, in the strip
+    expect(txt()).toContain('Visibility 4 km');
+    expect(txt()).toContain('(-RA)'); // raw code in the detail
+    fireEvent.click(box);
+    expect(txt()).not.toContain('Ceiling 800 ft');
   });
 
   it('switches ceiling chips with the altitude unit', () => {
